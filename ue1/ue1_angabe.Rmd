@@ -1,7 +1,7 @@
 ---
 title: "MLE01 - Vertiefende statistische Verfahren"
 subtitle: "1. Übungsblatt SS 2024"
-author: "Joachim Waltl, Stefan Kolb"
+author: "Stefan Kolb, Joachim Waltl"
 output:
   pdf_document: default
   html_document:
