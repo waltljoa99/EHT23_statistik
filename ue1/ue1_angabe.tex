@@ -1,0 +1,232 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={MLE01 - Vertiefende statistische Verfahren},
+  pdfauthor={Max Mustermann, Erika Musterfrau, Hans Mustermann},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{MLE01 - Vertiefende statistische Verfahren}
+\usepackage{etoolbox}
+\makeatletter
+\providecommand{\subtitle}[1]{% add subtitle to \maketitle
+  \apptocmd{\@title}{\par {\large #1 \par}}{}{}
+}
+\makeatother
+\subtitle{1. Übungsblatt SS 2024}
+\author{Max Mustermann, Erika Musterfrau, Hans Mustermann}
+\date{}
+
+\begin{document}
+\maketitle
+
+\hypertarget{allgemeine-information}{%
+\section{Allgemeine Information}\label{allgemeine-information}}
+
+Alle Aufgaben sind mit R zu lössen. Die Berechnungen sollen
+nachvollziehbar und dokumentiert sein. Um die vollständige Punktezahl zu
+erreichen, müssen alle Ergebnisse und Fragen entsprechend interpretiert
+bzw. beantwortet werden. Code alleine ist nicht ausreichend! Die Abgabe
+erfolgt über Moodle entsprechend der Abgaberichtlinien als pdf und Rmd
+File. Bitte inkludieren Sie namentlich alle beteiligten
+Gruppenmitglieder sowohl im Bericht als auch im Source Code. Die
+jeweiligen Datensätze die für diese Übung relevant sind finden Sie
+ebenfalls in Moodle.
+
+\hypertarget{lineare-regressionsanalyse-4p}{%
+\section{1 Lineare Regressionsanalyse
+{[}4P{]}}\label{lineare-regressionsanalyse-4p}}
+
+Für Menschen, die ihren Blutdruck senken wollen, ist eine häufig
+empfohlene Vorgehensweise, die Salzaufnahme zu senken. Sie möchten
+feststellen, ob es eine lineare Beziehung zwischen Salzaufnahme und
+Blutdruck gibt. Sie nehmen 52 Personen in die Stichprobe auf und messen
+deren diastolischen Blutdruck (in mmHg) und Natriumausscheidung
+(mmol/24h). {[}\href{https://doi.org/10.1136/bmj.297.6644.319}{ref}{]}
+
+\textbf{{[}2P{]} a:} Importieren Sie den Datensatz
+\texttt{intersalt.csv}. Erstellen Sie zwei Regressionsmodelle für den
+diastolische Blutdruck (bp) in Abhängigkeit der Natriumausscheidung
+(na). Das erste Modell soll alle Datenpunkte verwenden. Für das zweite
+Modell sollen die vier Datenpunkte mit der geringsten
+Natriumausscheidung aus dem Datensatz entfernt werden.
+
+Führen Sie für beide Modelle eine lineare Regressionsanalyse durch, die
+folgende Punkte umfasst:
+
+\begin{enumerate}
+\def\labelenumi{\roman{enumi})}
+\tightlist
+\item
+  Modellgleichung inklusive 95\% Konfidenzintervall der Modellparameter
+\item
+  Interpretation des Ergebnisses hinsichtlich Signifikanz und Modellgüte
+\item
+  Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall
+\end{enumerate}
+
+Vergleichen Sie beide Modelle. Was können Sie beobachten?
+
+\textbf{{[}2P{]} b:} Lesen Sie den Artikel ``The (Political) Science of
+Salt'' und vergleichen Sie damit Ihre Beobachtungen. Gibt es Faktoren
+die in Ihren Modellen eventuell nicht berücksichtigt wurden? Wie lautet
+die Schlussfolgerung - führt eine Reduktion der Salzaufnahme zu einer
+Blutdrucksenkung?
+
+\hypertarget{lineare-regressionsanalyse-kategorisch-3p}{%
+\section{2 Lineare Regressionsanalyse (kategorisch)
+{[}3P{]}}\label{lineare-regressionsanalyse-kategorisch-3p}}
+
+Der Datensatz \texttt{infant.csv} enthält Information über die
+unterschiedliche Kindersterblichkeit zwischen den Kontinenten. Die
+Variable \texttt{infant} enthält die Kindersterblichkeit in Tode pro
+1000 Geburten. Unterscheidet sich die Kindersterblichkeit zwischen den
+Kontinenten?
+
+\textbf{{[}2P{]} a:} Führen Sie eine Regressionsanalyse mit Europa als
+Referenz durch, welche die folgenden Punkte umfasst:
+
+\begin{enumerate}
+\def\labelenumi{\roman{enumi})}
+\tightlist
+\item
+  Modellgleichung inklusive 95\% Konfidenzintervall der Modellparameter
+\item
+  Interpretation des Ergebnisses hinsichtlich Signifikanz
+\item
+  Beurteilung der Modellgüte und Residuenanalyse
+\end{enumerate}
+
+\textbf{{[}1P{]} b:} Wie hoch ist die Kindersterblichkeit in Europa und
+wie hoch in Afrika (inkl. Unsicherheit)?
+
+\hypertarget{regressionsanalyse-3p}{%
+\section{3 Regressionsanalyse {[}3P{]}}\label{regressionsanalyse-3p}}
+
+Die Daten \texttt{wtloss.xlsx} enthalten den Gewichtsverlauf eines
+adipösen Patienten im Zuge einer Diät. Sie als betreuender Mediziner und
+passionierter Freizeit Data Scientist möchten ein geeignetes
+Regressionsmodell erstellen, um den Verlauf der Diät besser steuern zu
+können. Das ideale Zielgewicht bezogen auf die Größe des Patienten wäre
+bei 80 kg. Importieren Sie den Datensatz mit Hilfe der
+\texttt{read\_excel()} Funktion aus dem \texttt{library(readxl)} Paket.
+
+\textbf{{[}2P{]} a:} Die Regressionsanalyse sollte folgende Punkte
+inkludieren:
+
+\begin{enumerate}
+\def\labelenumi{\roman{enumi})}
+\tightlist
+\item
+  Modellgleichung inklusive 95\% Konfidenzintervall der Modellparameter
+\item
+  Interpretation des Ergebnisses hinsichtlich Signifikanz
+\item
+  Beurteilung der Modellgüte und Residuenanalyse
+\item
+  Grafische Darstellung der Regressionsgeraden inkl. Konfidenz-und
+  Vorhersageintervall
+\end{enumerate}
+
+\textbf{{[}1P{]} b:} Welches Gewicht hat der Patient nach 30 Tagen bzw.
+nach 200 Tagen Diät?
+
+\hypertarget{multiple-regressionsanalyse-3p}{%
+\section{4 Multiple Regressionsanalyse
+{[}3P{]}}\label{multiple-regressionsanalyse-3p}}
+
+Die Framingham-Herz-Studie war ein Wendepunkt bei der Identifizierung
+von Risikofaktoren für koronare Herzkrankheiten und ist eine der
+wichtigsten epidemiologischen Studien die je durchgeführt wurden. Ein
+großer Teil unseres heutigen Verständnisses von
+Herz-Kreislauf-Erkrankungen ist auf diese Studie zurückzuführen. Der
+Datensatz \texttt{Framingham.sav} enthält Varibalen hinsichtlich
+Demographie, Verhaltensweise, Krankengeschichte und Risikofaktoren.
+Finden Sie ein geeignetes Modell, dass den systolischen Blutdruck
+(\texttt{sysbp}) beschreibt. Vermeiden Sie nicht relevante bzw.
+redundante Variablen (z.B. ``Incident'' Variablen). Achten Sie auf
+Ausreißer und fehlende Daten (\texttt{NaN,\ NA\textquotesingle{}s}).
+
+\textbf{{[}2P{]} a:} Die Regressionsanalyse sollte folgende Punkte
+inkludieren:
+
+\begin{enumerate}
+\def\labelenumi{\roman{enumi})}
+\tightlist
+\item
+  Modellgleichung inklusive 95\% Konfidenzintervall der Modellparameter
+\item
+  Interpretation des Ergebnisses hinsichtlich Signifikanz
+\item
+  Beurteilung der Modellgüte und Residuenanalyse
+\end{enumerate}
+
+\textbf{{[}1P{]} b:} Welchen systolischen Blutdruck hat eine Person mit
+folgendem Profil:
+
+Frau, 50 Jahre, High School, Raucher, 8 Zig/Tag, keine Blutdruck
+senkenden Medikamente, 220 mg/dl Serum Cholesterol, 85 mmHg
+diastolischer Blutdruck, BMI von 30, kein Diabetes, 90 bpm Herzrate und
+Glukoselevel von 90 mg/dl.
+
+\end{document}
