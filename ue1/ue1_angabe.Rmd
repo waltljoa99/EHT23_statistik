@@ -18,11 +18,78 @@ Für Menschen, die ihren Blutdruck senken wollen, ist eine häufig empfohlene Vo
 
 **[2P] a:** Importieren Sie den Datensatz `intersalt.csv`. Erstellen Sie zwei Regressionsmodelle für den diastolische Blutdruck (bp) in Abhängigkeit der Natriumausscheidung (na). Das erste Modell soll alle Datenpunkte verwenden. Für das zweite Modell sollen die vier Datenpunkte mit der geringsten Natriumausscheidung aus dem Datensatz entfernt werden.
 
+```{r}
+# Daten einlesen
+intersalt <- read.csv("intersalt.csv", sep = ";", dec = ",")
+
+# Überblick über die Daten
+str(intersalt)
+
+# Umwandlung der Variablen vom Typ Character in numerische Variablen
+intersalt$b <- as.numeric(intersalt$b)
+intersalt$bp <- as.numeric(intersalt$bp)
+intersalt$na <- as.numeric(intersalt$na)
+
+# Erstes Modell (alle Datenpunkte)
+model_1 <- lm(bp ~ na, data = intersalt)
+
+# Datensatz nach Natriumausscheidung sortieren
+intersalt_sorted <- intersalt[order(intersalt$na),]
+
+# Enfernen der ersten vier Datenpunkte
+intersalt_m2 <- intersalt_sorted[-c(1:4),]
+
+# Zweites Modell
+model_2 <- lm(bp ~ na, data = intersalt_m2)
+
+```
 
 Führen Sie für beide Modelle eine lineare Regressionsanalyse durch, die folgende Punkte umfasst:
 
+
 i) Modellgleichung inklusive 95% Konfidenzintervall der Modellparameter
 i) Interpretation des Ergebnisses hinsichtlich Signifikanz und Modellgüte
+i) Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall
+
+
+**Modell 1**
+```{r}
+# Zusammenfassung und KI-Intervall für model_1
+summary(model_1)
+confint(model_1)
+```
+
+Die Modellgleichung für das erste Modell lautet: bp = 67.56 [63.25;71.87] + 0.038 [0.01;0.07] * na. 
+
+**Intercept:** Das 95% Konfidenzintervall für den Intercept liegt zwischen 63.25123 und 71.87368.
+
+**Steigung:** Das 95% Konfidenzintervall für die Steigung bezüglich der Natriumausscheidung liegt zwischen 0.00988 und 0.06548.
+
+i) Interpretation des Ergebnisses hinsichtlich Signifikanz und Modellgüte
+
+
+
+i) Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall
+
+```{r}  
+# Zusammenfassung und KI-Intervall für model_2
+summary(model_2)
+confint(model_2)
+
+```
+
+Die Modellgleichung für das zweite Modell lautet: bp = 81.06 [74.40;87.72] - 0.045 [-0.09;0.00] * na.
+
+**Intercept:** Das 95% Konfidenzintervall für den Intercept liegt zwischen 74.40191 und 
+87.72479.
+
+**Steigung:** Das 95% Konfidenzintervall für die Steigung bezüglich der Natriumausscheidung liegt zwischen −0.08602 und −0.00337.
+
+
+i) Interpretation des Ergebnisses hinsichtlich Signifikanz und Modellgüte
+
+
+
 i) Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall
 
 Vergleichen Sie beide Modelle. Was können Sie beobachten?
