@@ -123,6 +123,8 @@ Trotz der signifikanten Koeffizienten in beiden Modellen bleiben die R^2 Werte r
 
 **[2P] b:** Lesen Sie den Artikel "The (Political) Science of Salt" und vergleichen Sie damit Ihre Beobachtungen. Gibt es Faktoren die in Ihren Modellen eventuell nicht berücksichtigt wurden? Wie lautet die Schlussfolgerung - führt eine Reduktion der Salzaufnahme zu einer Blutdrucksenkung? 
 
+Modellierung der Daten: Obwohl das lineare Modell signifikante Zusammenhänge zwischen Natriumaufnahme und Blutdruck gefunden hat, legen die Ergebnisse nahe, dass der Zusammenhang komplex ist und möglicherweise von weiteren Faktoren beeinflusst wird, die in einfacheren Modellen nicht berücksichtigt werden.
+Schlussfolgerung hinsichtlich Salzaufnahme und Blutdrucksenkung: Die Studie legt nahe, dass eine Reduktion der Salzaufnahme zu einer Senkung des Blutdrucks führen kann, besonders über längere Zeiträume und Lebensspannen hinweg betrachtet. Allerdings scheint der Effekt von der Höhe der Salzaufnahme und von anderen Variablen beeinflusst zu werden.
 
 
 # 2 Lineare Regressionsanalyse (kategorisch) [3P]
