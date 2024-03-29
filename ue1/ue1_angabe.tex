@@ -37,6 +37,46 @@
 \makeatother
 \usepackage{xcolor}
 \usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
 \usepackage{graphicx}
 \makeatletter
 \def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
@@ -62,7 +102,7 @@
 \urlstyle{same}
 \hypersetup{
   pdftitle={MLE01 - Vertiefende statistische Verfahren},
-  pdfauthor={Max Mustermann, Erika Musterfrau, Hans Mustermann},
+  pdfauthor={Stefan Kolb, Joachim Waltl},
   hidelinks,
   pdfcreator={LaTeX via pandoc}}
 
@@ -74,7 +114,7 @@
 }
 \makeatother
 \subtitle{1. Übungsblatt SS 2024}
-\author{Max Mustermann, Erika Musterfrau, Hans Mustermann}
+\author{Stefan Kolb, Joachim Waltl}
 \date{}
 
 \begin{document}
@@ -111,6 +151,45 @@ diastolische Blutdruck (bp) in Abhängigkeit der Natriumausscheidung
 Modell sollen die vier Datenpunkte mit der geringsten
 Natriumausscheidung aus dem Datensatz entfernt werden.
 
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Daten einlesen}
+\NormalTok{intersalt }\OtherTok{\textless{}{-}} \FunctionTok{read.csv}\NormalTok{(}\StringTok{"intersalt.csv"}\NormalTok{, }\AttributeTok{sep =} \StringTok{";"}\NormalTok{, }\AttributeTok{dec =} \StringTok{","}\NormalTok{)}
+
+\CommentTok{\# Überblick über die Daten}
+\FunctionTok{str}\NormalTok{(intersalt)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 'data.frame':    52 obs. of  4 variables:
+##  $ b      : num  0.512 0.226 0.316 0.042 0.086 0.265 0.384 0.501 0.352 0.443 ...
+##  $ bp     : num  72 78.2 73.9 61.7 61.4 73.4 79.2 66.6 82.1 75 ...
+##  $ na     : num  149.3 133 142.6 5.8 0.2 ...
+##  $ country: chr  "Argentina" "Belgium" "Belgium" "Brazil" ...
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Umwandlung der Variablen vom Typ Character in numerische Variablen}
+\NormalTok{intersalt}\SpecialCharTok{$}\NormalTok{b }\OtherTok{\textless{}{-}} \FunctionTok{as.numeric}\NormalTok{(intersalt}\SpecialCharTok{$}\NormalTok{b)}
+\NormalTok{intersalt}\SpecialCharTok{$}\NormalTok{bp }\OtherTok{\textless{}{-}} \FunctionTok{as.numeric}\NormalTok{(intersalt}\SpecialCharTok{$}\NormalTok{bp)}
+\NormalTok{intersalt}\SpecialCharTok{$}\NormalTok{na }\OtherTok{\textless{}{-}} \FunctionTok{as.numeric}\NormalTok{(intersalt}\SpecialCharTok{$}\NormalTok{na)}
+
+\CommentTok{\# Erstes Modell (alle Datenpunkte)}
+\NormalTok{model\_1 }\OtherTok{\textless{}{-}} \FunctionTok{lm}\NormalTok{(bp }\SpecialCharTok{\textasciitilde{}}\NormalTok{ na, }\AttributeTok{data =}\NormalTok{ intersalt)}
+
+\CommentTok{\# Datensatz nach Natriumausscheidung sortieren}
+\NormalTok{intersalt\_sorted }\OtherTok{\textless{}{-}}\NormalTok{ intersalt[}\FunctionTok{order}\NormalTok{(intersalt}\SpecialCharTok{$}\NormalTok{na),]}
+
+\CommentTok{\# Enfernen der ersten vier Datenpunkte}
+\NormalTok{intersalt\_m2 }\OtherTok{\textless{}{-}}\NormalTok{ intersalt\_sorted[}\SpecialCharTok{{-}}\FunctionTok{c}\NormalTok{(}\DecValTok{1}\SpecialCharTok{:}\DecValTok{4}\NormalTok{),]}
+
+\CommentTok{\# Zweites Modell}
+\NormalTok{model\_2 }\OtherTok{\textless{}{-}} \FunctionTok{lm}\NormalTok{(bp }\SpecialCharTok{\textasciitilde{}}\NormalTok{ na, }\AttributeTok{data =}\NormalTok{ intersalt\_m2)}
+\end{Highlighting}
+\end{Shaded}
+
 Führen Sie für beide Modelle eine lineare Regressionsanalyse durch, die
 folgende Punkte umfasst:
 
@@ -125,7 +204,203 @@ folgende Punkte umfasst:
   Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall
 \end{enumerate}
 
-Vergleichen Sie beide Modelle. Was können Sie beobachten?
+\textbf{Modell 1}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Zusammenfassung und KI{-}Intervall für model\_1}
+\FunctionTok{summary}\NormalTok{(model\_1)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+## lm(formula = bp ~ na, data = intersalt)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -8.8625 -2.8906  0.0299  3.6470  9.4283 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) 67.56245    2.14643  31.477   <2e-16 ***
+## na           0.03768    0.01384   2.722   0.0089 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 4.511 on 50 degrees of freedom
+## Multiple R-squared:  0.1291, Adjusted R-squared:  0.1117 
+## F-statistic: 7.411 on 1 and 50 DF,  p-value: 0.008901
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{confint}\NormalTok{(model\_1)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                    2.5 %      97.5 %
+## (Intercept) 63.251226427 71.87367736
+## na           0.009878513  0.06547863
+\end{verbatim}
+
+Die Modellgleichung für das erste Modell lautet: bp = 67.56
+{[}63.25;71.87{]} + 0.038 {[}0.01;0.07{]} * na.
+
+\textbf{Intercept:} Das 95\% Konfidenzintervall für den Intercept liegt
+zwischen 63.25123 und 71.87368. Das bedeutet, dass der diastolische
+Blutdruck bei einer Natriumausscheidung von 0 mmol/24h mit einer
+95\%igen Sicherheit zwischen 63.25 und 71.87 mmHg liegt.
+
+\textbf{Steigung:} Das 95\% Konfidenzintervall für die Steigung
+bezüglich der Natriumausscheidung liegt zwischen 0.00988 und 0.06548.
+Wir können also mit 95\%iger Sicherheit sagen, dass der Anstieg des
+diastolische Blutdruck zwischen 0.00988 und 0.06548 liegt, wenn die
+Natriumausscheidung um 1 mmol/24h steigt.
+
+\textbf{Signifikanz und Modellgüte:} Die Signifikanz des p-Wertes für
+die Steigung (p = 0.0089) deutet auf einen statistisch signifikanten
+Zusammenhang zwischen der Natriumausscheidung und dem diastolischen
+Blutdruck hin. Der p-Wert für den Intercept dieses Modells ist sogar als
+hochsignifikant zu werten. Ein Wert von 0.1291 für das Bestimmtheitsmaß
+R\^{}2 zeigt jedoch, dass das Modell nur etwa 12.91\% der Variabilität
+im diastolischen Blutdruck mit der Natriumausscheidung erklären kann.
+Die Erkenntnis daraus ist, dass noch andere Faktor den Blutdruck
+beeinflussen.
+
+\begin{enumerate}
+\def\labelenumi{\roman{enumi})}
+\tightlist
+\item
+  Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall
+\end{enumerate}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall für model\_1}
+\FunctionTok{library}\NormalTok{(ggplot2)}
+\FunctionTok{ggplot}\NormalTok{(intersalt, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ na, }\AttributeTok{y =}\NormalTok{ bp)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_smooth}\NormalTok{(}\AttributeTok{method =} \StringTok{"lm"}\NormalTok{, }\AttributeTok{se =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Diastolischer Blutdruck in Abhängigkeit der Natriumausscheidung"}\NormalTok{,}
+       \AttributeTok{x =} \StringTok{"Natriumausscheidung (mmol/24h)"}\NormalTok{,}
+       \AttributeTok{y =} \StringTok{"Diastolischer Blutdruck (mmHg)"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## `geom_smooth()` using formula = 'y ~ x'
+\end{verbatim}
+
+\includegraphics{ue1_angabe_files/figure-latex/unnamed-chunk-3-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Zusammenfassung und KI{-}Intervall für model\_2}
+\FunctionTok{summary}\NormalTok{(model\_2)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+## lm(formula = bp ~ na, data = intersalt_m2)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -6.5966 -2.4042 -0.4884  2.8636  7.0977 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) 81.06335    3.30938  24.495   <2e-16 ***
+## na          -0.04470    0.02053  -2.177   0.0346 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 3.807 on 46 degrees of freedom
+## Multiple R-squared:  0.09342,    Adjusted R-squared:  0.07371 
+## F-statistic:  4.74 on 1 and 46 DF,  p-value: 0.03464
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{confint}\NormalTok{(model\_2)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                   2.5 %      97.5 %
+## (Intercept) 74.40191390 87.72478658
+## na          -0.08602363 -0.00337225
+\end{verbatim}
+
+Die Modellgleichung für das zweite Modell lautet: bp = 81.06
+{[}74.40;87.72{]} - 0.045 {[}-0.09;0.00{]} * na.
+
+\textbf{Intercept:} Das 95\% Konfidenzintervall für den Intercept liegt
+zwischen 74.40191 und 87.72479. Das bedeutet, dass der diastolische
+Blutdruck laut diesem Modell bei einer Natriumausscheidung von 0
+mmol/24h mit einer 95\%igen Sicherheit zwischen 74.40 und 87.72 mmHg
+liegt.
+
+\textbf{Steigung:} Das 95\% Konfidenzintervall für die Steigung
+bezüglich der Natriumausscheidung liegt zwischen -0.08602 und -0.00337.
+In diesem Fall ist also von einer Abnahme des diastolischen Blutdrucks
+um 0.00337 bis 0.08602 mmHg auszugehen, wenn die Natriumausscheidung um
+1 mmol/24h steigt. Im Gegensatz zum ersten Modell zeigt die Steigung
+hier also einen negativen Zusammenhang zwischen Natriumausscheidung und
+diastolischem Blutdruck.
+
+\textbf{Signifikanz und Modellgüte:} Auch bei diesem Modell ist der
+p-Wert für den Intercept hochsignifikant. Der p-Wert für die Steigung
+ist mit 0.035 zwar signifikant, aber deutlich weniger als der p-Wert für
+die Steigung des ersten Modells. Das Bestimmtheitsmaß R\^{}2 beträgt
+hier 0.09, was bedeutet, dass das Modell nur etwa 9\% der Variabilität
+im diastolischen Blutdruck mit der Natriumausscheidung erklären kann,
+wobei es beim ersten Modell noch knapp 13\% waren.
+
+\begin{enumerate}
+\def\labelenumi{\roman{enumi})}
+\tightlist
+\item
+  Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall
+\end{enumerate}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall für model\_2}
+\FunctionTok{ggplot}\NormalTok{(intersalt\_m2, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ na, }\AttributeTok{y =}\NormalTok{ bp)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_smooth}\NormalTok{(}\AttributeTok{method =} \StringTok{"lm"}\NormalTok{, }\AttributeTok{se =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Diastolischer Blutdruck in Abhängigkeit der Natriumausscheidung (reduzierte Daten)"}\NormalTok{,}
+       \AttributeTok{x =} \StringTok{"Natriumausscheidung (mmol/24h)"}\NormalTok{,}
+       \AttributeTok{y =} \StringTok{"Diastolischer Blutdruck (mmHg)"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## `geom_smooth()` using formula = 'y ~ x'
+\end{verbatim}
+
+\includegraphics{ue1_angabe_files/figure-latex/unnamed-chunk-5-1.pdf}
+
+Vergleichen Sie beide Modelle. Was können Sie beobachten
+
+Die signifikante Änderung der Richtung des Effekts (von positiv zu
+negativ) nach dem Entfernen der vier Datenpunkte mit der niedrigsten
+Natriumausscheidung legt nahe, dass diese Datenpunkte einen erheblichen
+Einfluss auf das Gesamtergebnis des Modells haben.
+
+Ein niedrigerer Wert für R\^{}2 im zweiten Modell könnte bedeuten, dass
+die vier entfernten Datenpunkte tatsächlich einen wichtigen Beitrag zur
+Erklärung der Variabilität des diastolischen Blutdrucks leisten.
+
+Trotz der signifikanten Koeffizienten in beiden Modellen bleiben die
+R\^{}2 Werte relativ niedrig. Somit wird deutlich, dass noch weitere,
+hier nicht betrachtete Variablen einen Einfluss auf den diastolischen
+Blutdruck haben.
 
 \textbf{{[}2P{]} b:} Lesen Sie den Artikel ``The (Political) Science of
 Salt'' und vergleichen Sie damit Ihre Beobachtungen. Gibt es Faktoren

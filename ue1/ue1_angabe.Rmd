@@ -47,7 +47,7 @@ model_2 <- lm(bp ~ na, data = intersalt_m2)
 Führen Sie für beide Modelle eine lineare Regressionsanalyse durch, die folgende Punkte umfasst:
 
 
-i) Modellgleichung inklusive 95% Konfidenzintervall der Modellparameter
+i) Modellgleichung inklusive 95\% Konfidenzintervall der Modellparameter
 i) Interpretation des Ergebnisses hinsichtlich Signifikanz und Modellgüte
 i) Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall
 
@@ -61,15 +61,28 @@ confint(model_1)
 
 Die Modellgleichung für das erste Modell lautet: bp = 67.56 [63.25;71.87] + 0.038 [0.01;0.07] * na. 
 
-**Intercept:** Das 95% Konfidenzintervall für den Intercept liegt zwischen 63.25123 und 71.87368.
+**Intercept:** Das 95\% Konfidenzintervall für den Intercept liegt zwischen 63.25123 und 71.87368. Das bedeutet, dass der diastolische Blutdruck bei einer Natriumausscheidung von 0 mmol/24h mit einer 95\%igen Sicherheit zwischen 63.25 und 71.87 mmHg liegt.
 
-**Steigung:** Das 95% Konfidenzintervall für die Steigung bezüglich der Natriumausscheidung liegt zwischen 0.00988 und 0.06548.
+**Steigung:** Das 95\% Konfidenzintervall für die Steigung bezüglich der Natriumausscheidung liegt zwischen 0.00988 und 0.06548. Wir können also mit 95\%iger Sicherheit sagen, dass der Anstieg des diastolische Blutdruck zwischen 0.00988 und 0.06548 liegt, wenn die Natriumausscheidung um 1 mmol/24h steigt.
 
-i) Interpretation des Ergebnisses hinsichtlich Signifikanz und Modellgüte
-
+**Signifikanz und Modellgüte:** 
+Die Signifikanz des p-Wertes für die Steigung (p = 0.0089) deutet auf einen statistisch signifikanten Zusammenhang zwischen der Natriumausscheidung und dem diastolischen Blutdruck hin. Der p-Wert für den Intercept dieses Modells ist sogar als hochsignifikant zu werten. Ein Wert von 0.1291 für das Bestimmtheitsmaß R^2 zeigt jedoch, dass das Modell nur etwa 12.91\% der Variabilität im diastolischen Blutdruck mit der Natriumausscheidung erklären kann. Die Erkenntnis daraus ist, dass noch andere Faktor den Blutdruck beeinflussen. 
 
 
 i) Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall
+
+```{r}
+# Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall für model_1
+library(ggplot2)
+ggplot(intersalt, aes(x = na, y = bp)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(title = "Diastolischer Blutdruck in Abhängigkeit der Natriumausscheidung",
+       x = "Natriumausscheidung (mmol/24h)",
+       y = "Diastolischer Blutdruck (mmHg)")
+
+```
+
 
 ```{r}  
 # Zusammenfassung und KI-Intervall für model_2
@@ -81,18 +94,32 @@ confint(model_2)
 Die Modellgleichung für das zweite Modell lautet: bp = 81.06 [74.40;87.72] - 0.045 [-0.09;0.00] * na.
 
 **Intercept:** Das 95% Konfidenzintervall für den Intercept liegt zwischen 74.40191 und 
-87.72479.
+87.72479. Das bedeutet, dass der diastolische Blutdruck laut diesem Modell bei einer Natriumausscheidung von 0 mmol/24h mit einer 95%igen Sicherheit zwischen 74.40 und 87.72 mmHg liegt.
 
-**Steigung:** Das 95% Konfidenzintervall für die Steigung bezüglich der Natriumausscheidung liegt zwischen −0.08602 und −0.00337.
+**Steigung:** Das 95% Konfidenzintervall für die Steigung bezüglich der Natriumausscheidung liegt zwischen -0.08602 und -0.00337. In diesem Fall ist also von einer Abnahme des diastolischen Blutdrucks um 0.00337 bis 0.08602 mmHg auszugehen, wenn die Natriumausscheidung um 1 mmol/24h steigt. Im Gegensatz zum ersten Modell zeigt die Steigung hier also einen negativen Zusammenhang zwischen Natriumausscheidung und diastolischem Blutdruck.  
 
-
-i) Interpretation des Ergebnisses hinsichtlich Signifikanz und Modellgüte
-
-
+**Signifikanz und Modellgüte:** Auch bei diesem Modell ist der p-Wert für den Intercept hochsignifikant. Der p-Wert für die Steigung ist mit 0.035 zwar signifikant, aber deutlich weniger als der p-Wert für die Steigung des ersten Modells. Das Bestimmtheitsmaß R^2 beträgt hier 0.09, was bedeutet, dass das Modell nur etwa 9% der Variabilität im diastolischen Blutdruck mit der Natriumausscheidung erklären kann, wobei es beim ersten Modell noch knapp 13% waren.
 
 i) Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall
 
-Vergleichen Sie beide Modelle. Was können Sie beobachten?
+```{r}
+# Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall für model_2
+ggplot(intersalt_m2, aes(x = na, y = bp)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(title = "Diastolischer Blutdruck in Abhängigkeit der Natriumausscheidung (reduzierte Daten)",
+       x = "Natriumausscheidung (mmol/24h)",
+       y = "Diastolischer Blutdruck (mmHg)")
+```
+
+Vergleichen Sie beide Modelle. Was können Sie beobachten
+
+Die signifikante Änderung der Richtung des Effekts (von positiv zu negativ) nach dem Entfernen der vier Datenpunkte mit der niedrigsten Natriumausscheidung legt nahe, dass diese Datenpunkte einen erheblichen Einfluss auf das Gesamtergebnis des Modells haben.
+
+Ein niedrigerer Wert für R^2 im zweiten Modell könnte bedeuten, dass die vier entfernten Datenpunkte tatsächlich einen wichtigen Beitrag zur Erklärung der Variabilität des diastolischen Blutdrucks leisten.
+
+Trotz der signifikanten Koeffizienten in beiden Modellen bleiben die R^2 Werte relativ niedrig. Somit wird deutlich, dass noch weitere, hier nicht betrachtete Variablen einen Einfluss auf den diastolischen Blutdruck haben.
+
 
 **[2P] b:** Lesen Sie den Artikel "The (Political) Science of Salt" und vergleichen Sie damit Ihre Beobachtungen. Gibt es Faktoren die in Ihren Modellen eventuell nicht berücksichtigt wurden? Wie lautet die Schlussfolgerung - führt eine Reduktion der Salzaufnahme zu einer Blutdrucksenkung? 
 
@@ -103,7 +130,7 @@ Der Datensatz `infant.csv` enthält Information über die unterschiedliche Kinde
 
 **[2P] a:** Führen Sie eine Regressionsanalyse mit Europa als Referenz durch, welche die folgenden Punkte umfasst:
 
-i) Modellgleichung inklusive 95% Konfidenzintervall der Modellparameter
+i) Modellgleichung inklusive 95\% Konfidenzintervall der Modellparameter
 i) Interpretation des Ergebnisses hinsichtlich Signifikanz
 i) Beurteilung der Modellgüte und Residuenanalyse
 
