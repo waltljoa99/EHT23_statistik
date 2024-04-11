@@ -136,7 +136,134 @@ i) Modellgleichung inklusive 95\% Konfidenzintervall der Modellparameter
 i) Interpretation des Ergebnisses hinsichtlich Signifikanz
 i) Beurteilung der Modellgüte und Residuenanalyse
 
+```{r}
+# Import the data
+data <- read.csv2("infant.csv")
+
+# Convert the region variable to a factor
+data$region <- as.factor(data$region)
+
+# Set "Europe" as the reference level for the region variable
+data$region <- relevel(data$region, ref = "Europe")
+
+# Fit a linear model with infant as a function of region only
+model <- lm(infant ~ region, data = data)
+
+# Print the model equation and 95% confidence intervals
+summary(model)
+confint(model, level=0.95)
+```
+Der p-WErt der F-Stastik liegt unter 5%&, was bedeuet, dass mindestens ein
+Koeffizient signifikant ist.
+
+Der p-Wert der erwarteten Kindersterblichkeit für Europa "(Intercept)" liegt
+mit 31% über dem Signifikanzniveau von 5%. Dementsprechend ist 0 im
+Konfidenzintervall eingeschlossen. D.h. es gibt keinen signfikanten Unterschied 
+zu Kindersterblichkeit gleich 0.
+
+Der p-Wert der erwarteten Differenz in der Kindersterblichkeit zwischen Europa
+und Amerika "regionAmericas" liegt auch über 5%. D.h. es gibt keinen signifikanten
+Unterschied in der Kindeersterblichkeit zwischen Euorpa und Amerika.
+
+Die p-Werte der erwareten Differenzen in der Kindersterblichkeit zwischen den
+übrigen Regionen und Europa liegen unter 5%. D.h. es gibt einen signfikanten
+Unterschied in der Kindersterblichkeit zu Europa.
+
+Der adjusted R^2 beträgt 23%. D.h. 23% der Varianz in der (relativen)
+Kindersterblichkeit können durch eine Änderung in den (binären)
+Prädiktor-Variablen bestimmt werden.
+
+
+```{r}
+# Interpret the significance of the results
+# The p-value for each term tests the null hypothesis that the coefficient is equal to zero (no effect).
+# A low p-value (< 0.05) indicates that you can reject the null hypothesis.
+
+# Assess the quality of the model and perform a residual analysis
+#par(mfrow=c(2,2))
+#plot(model)
+
+
+# Convert model's data to a data frame
+model_data <- data[complete.cases(data), ]  # remove rows with missing values
+df <- data.frame(resid = resid(model), fitted = fitted(model),
+                 region = model_data$region, infant = model_data$infant)
+
+# Load ggplot2
+library(ggplot2)
+
+# Create the four diagnostic plots
+# 1. Residuals vs Fitted
+p1 <- ggplot(df, aes(fitted, resid)) +
+  geom_point() +
+  #geom_smooth(se = FALSE) +
+  ggtitle("1.) Residuum vs Vorhergesagter Wert")
+
+# 2. Normal Q-Q
+p2 <- ggplot(df, aes(sample = resid)) +
+  stat_qq() +
+  stat_qq_line(colour = "red") +
+  ggtitle("2.) Normal Q-Q-Plot")
+
+# 3. Histogram of residuals
+p3 <- ggplot(df, aes(x=resid)) +
+  geom_histogram(binwidth = 10) +
+  ggtitle("3.) Histogramm der Residuen")
+
+# 4. Scatter Plot
+p4 <- ggplot(df, aes(x=region, y=infant)) +
+  geom_jitter(width=0.0) +
+  ggtitle("Streudiagramm der Kindersterblichkeit nach Region")
+
+# Load gridExtra
+library(gridExtra)
+
+# Arrange the plots in a 4x1 grid
+grid.arrange(p1, p2, p3, p4, nrow = 2)
+
+
+
+```
+Die Region Asien zeigt 3 Ausreißer nach oben, die besonders ins Auge stechen.
+Wenn man sie ignoriert, kann man eine annährende Normalverteilung der Residuen
+beispielsweise im Q-Q-Plot und Histogramm erkennen.
+
+Links oben: Die Residuen streuen normalverteilt um den Nullpunkt, allerdings
+scheint die Standardabweichung der Residuen nach Region unterschiedlich zu sein.
+
+Insgesamt entsteht aber der Eindruck, dass eine Normalverteilung der Residuen
+vorliegt und ihre Varianz in etwa gleich bleibt
+(d.h. Homoskedastizität gegeben ist). 
+```{r}
+#installed_packages <- installed.packages()
+#print(installed_packages)
+```
+
 **[1P] b:** Wie hoch ist die Kindersterblichkeit in Europa und wie hoch in Afrika (inkl. Unsicherheit)?
+
+```{r}
+# Get the model coefficients and their confidence intervals
+coef <- coef(model)
+conf_int <- confint(model)
+names(coef(model))
+
+# Calculate the infant mortality rate for Europe
+europe_coef <- coef["(Intercept)"]
+europe_conf_int <- conf_int["(Intercept)", ]
+
+# Calculate the infant mortality rate for Africa
+africa_coef <- coef["regionAfrica"]
+africa_conf_int <- conf_int["regionAfrica", ]
+
+# Print the results
+cat("Europa:\n")
+cat("Anzahl: ", europe_coef, "\n")
+cat("95% KI: ", europe_conf_int, "\n")
+
+cat("Afrika:\n")
+cat("Anzahl: ", africa_coef, "\n")
+cat("95% KI: ", africa_conf_int, "\n")
+```
 
 # 3 Regressionsanalyse [3P]
 Die Daten `wtloss.xlsx` enthalten den Gewichtsverlauf eines adipösen Patienten im Zuge einer Diät. Sie als betreuender Mediziner und passionierter Freizeit Data Scientist möchten ein geeignetes Regressionsmodell erstellen, um den Verlauf der Diät besser steuern zu können. Das ideale Zielgewicht bezogen auf die Größe des Patienten wäre bei 80 kg. Importieren Sie den Datensatz mit Hilfe der `read_excel()` Funktion aus dem `library(readxl)` Paket. 
