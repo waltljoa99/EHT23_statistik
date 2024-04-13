@@ -261,8 +261,8 @@ cat("Anzahl: ", europe_coef, "\n")
 cat("95% KI: ", europe_conf_int, "\n")
 
 cat("Afrika:\n")
-cat("Anzahl: ", africa_coef, "\n")
-cat("95% KI: ", africa_conf_int, "\n")
+cat("Anzahl: ", africa_coef+europe_coef, "\n")
+cat("95% KI: ", africa_conf_int+europe_coef, "\n")
 ```
 
 # 3 Regressionsanalyse [3P]
@@ -273,9 +273,171 @@ Die Daten `wtloss.xlsx` enthalten den Gewichtsverlauf eines adipösen Patienten 
 i) Modellgleichung inklusive 95% Konfidenzintervall der Modellparameter
 i) Interpretation des Ergebnisses hinsichtlich Signifikanz
 i) Beurteilung der Modellgüte und Residuenanalyse
-i) Grafische Darstellung der Regressionsgeraden inkl. Konfidenz-und Vorhersageintervall
+i) Grafische Darstellung der Regressionsgeraden inkl. Konfidenz-und Vorhersageinterval
+
+```{r}
+library(readxl)
+# Import the data
+data <- read_excel("wtloss.xlsx")
+
+# Fit a linear model with infant as a function of region only
+model <- lm(Weight ~ Days, data = data)
+
+# Print the model equation and 95% confidence intervals
+summary(model)
+confint(model, level=0.95)
+```
+```{r}
+# Convert model's data to a data frame
+model_data <- data[complete.cases(data), ]  # remove rows with missing values
+df <- data.frame(resid = resid(model), fitted = fitted(model),
+                 Weight = model_data$Weight, Days = model_data$Days)
+
+# Load ggplot2
+library(ggplot2)
+
+# Create the four diagnostic plots
+# 1. Residuals vs Fitted
+p1 <- ggplot(df, aes(fitted, resid)) +
+  geom_point() +
+  #geom_smooth(se = FALSE) +
+  ggtitle("1.) Residuum vs Vorhergesagter Wert")
+
+# 2. Normal Q-Q
+p2 <- ggplot(df, aes(sample = resid)) +
+  stat_qq() +
+  stat_qq_line(colour = "red") +
+  ggtitle("2.) Normal Q-Q-Plot")
+
+# 3. Histogram of residuals
+p3 <- ggplot(df, aes(x=resid)) +
+  geom_histogram(binwidth = 0.5) +
+  ggtitle("3.) Histogramm der Residuen")
+
+# 4. Scatter Plot
+p4 <- ggplot(df, aes(x=Days, y=Weight)) +
+  geom_jitter(width=0.0) +
+  ggtitle("Streudiagramm Gewicht")
+
+# Load gridExtra
+library(gridExtra)
+
+# Arrange the plots in a 4x1 grid
+grid.arrange(p1, p2, p3, p4, nrow = 2)
+```
+```{r}
+# 1. Add predictions 
+pred.int <- predict(model, interval = "prediction")
+mydata <- cbind(data, pred.int)
+# 2. Regression line + confidence intervals
+library("ggplot2")
+p <- ggplot(mydata, aes(x=Days, y=Weight)) +
+  geom_point() +
+  stat_smooth(method = lm)
+# 3. Add prediction intervals
+p + geom_line(aes(y = lwr), color = "red", linetype = "dashed")+
+    geom_line(aes(y = upr), color = "red", linetype = "dashed")
+```
+```{r}
+# Load necessary library
+library(caret)
+
+# Drop the first row to avoid singularity in logarithmic model
+new_data <- data[-1, ]
+
+# Fit different types of models
+linear_model <- lm(Weight ~ Days, data = data)
+logarithmic_model <- lm(Weight ~ log(Days), data = new_data)
+quadratic_model <- lm(Weight ~ poly(Days, 2), data = data)
+cubic_model <- lm(Weight ~ poly(Days, 3), data = data)
+fifth_order_model <- lm(Weight ~ poly(Days, 5), data = data)
+
+# List of models
+models <- list(linear_model, logarithmic_model, quadratic_model, cubic_model, fifth_order_model)
+
+# Calculate R^2 and RMSE for each model
+for (model in models) {
+  print(summary(model)$r.squared) # R^2
+  print(summary(model)$adj.r.squared) # Adjusted R^2
+  print(sqrt(mean(resid(model)^2))) # RMSE
+  cat("\n")
+}
+```
+```{r}
+
+# Calculate the logarithm of a column and overwrite the old values
+log_data = data
+log_data$Weight <- log(data$Weight)
+
+# Convert model's data to a data frame
+model_data <- data[complete.cases(data), ]  # remove rows with missing values
+df <- data.frame(resid = resid(models[[3]]), fitted = fitted(models[[3]]),
+                 Weight = log_data$Weight, Days = log_data$Days)
+
+# Load ggplot2
+library(ggplot2)
+
+# Create the four diagnostic plots
+# 1. Residuals vs Fitted
+p1 <- ggplot(df, aes(fitted, resid)) +
+  geom_point() +
+  #geom_smooth(se = FALSE) +
+  ggtitle("1.) Residuum vs Vorhergesagter Wert")
+
+# 2. Normal Q-Q
+p2 <- ggplot(df, aes(sample = resid)) +
+  stat_qq() +
+  stat_qq_line(colour = "red") +
+  ggtitle("2.) Normal Q-Q-Plot")
+
+# 3. Histogram of residuals
+p3 <- ggplot(df, aes(x=resid)) +
+  geom_histogram(binwidth = 0.5) +
+  ggtitle("3.) Histogramm der Residuen")
+
+# 4. Scatter Plot
+p4 <- ggplot(df, aes(x=Days, y=Weight)) +
+  geom_jitter(width=0.0) +
+  ggtitle("Streudiagramm Gewicht")
+
+# Load gridExtra
+library(gridExtra)
+
+# Arrange the plots in a 4x1 grid
+grid.arrange(p1, p2, p3, p4, nrow = 2)
+```
 
 **[1P] b:** Welches Gewicht hat der Patient nach 30 Tagen bzw. nach 200 Tagen Diät?
+
+```{r}
+# Define new data frame with the single x value
+new_data <- data.frame(Days = c(30,200))
+
+# Calculate predicted y value with confidence interval
+confidence_interval <- predict(models[[1]], newdata = new_data, interval = "confidence")
+
+# Calculate predicted y value with prediction interval
+prediction_interval <- predict(models[[1]], newdata = new_data, interval = "prediction")
+
+# Print the results
+print(confidence_interval)
+print(prediction_interval)
+```
+
+```{r}
+# Define new data frame with the single x value
+new_data <- data.frame(Days = c(30,200))
+
+# Calculate predicted y value with confidence interval
+confidence_interval <- predict(models[[3]], newdata = new_data, interval = "confidence")
+
+# Calculate predicted y value with prediction interval
+prediction_interval <- predict(models[[3]], newdata = new_data, interval = "prediction")
+
+# Print the results
+print(confidence_interval)
+print(prediction_interval)
+```
 
 # 4 Multiple Regressionsanalyse [3P]
 Die Framingham-Herz-Studie war ein Wendepunkt bei der Identifizierung von Risikofaktoren für koronare Herzkrankheiten und ist eine der wichtigsten epidemiologischen Studien die je durchgeführt wurden. Ein großer Teil unseres heutigen Verständnisses von Herz-Kreislauf-Erkrankungen ist auf diese Studie zurückzuführen. Der Datensatz `Framingham.sav` enthält Varibalen hinsichtlich Demographie, Verhaltensweise, Krankengeschichte und Risikofaktoren. Finden Sie ein geeignetes Modell, dass den systolischen Blutdruck (`sysbp`) beschreibt. Vermeiden Sie nicht relevante bzw. redundante Variablen (z.B. "Incident" Variablen). Achten Sie auf Ausreißer und fehlende Daten (`NaN, NA's`). 
