@@ -287,6 +287,10 @@ model <- lm(Weight ~ Days, data = data)
 summary(model)
 confint(model, level=0.95)
 ```
+Laut der p-Werte (p<0.01) und zugehörigen Konfidenzintervalle liefert das lineare Regressionsmodell
+hochsignfikante Ergebnisse für die Konstante und den Koeffizienten in
+Weight = (Intercept) + Days * x
+
 ```{r}
 # Convert model's data to a data frame
 model_data <- data[complete.cases(data), ]  # remove rows with missing values
@@ -301,18 +305,18 @@ library(ggplot2)
 p1 <- ggplot(df, aes(fitted, resid)) +
   geom_point() +
   #geom_smooth(se = FALSE) +
-  ggtitle("1.) Residuum vs Vorhergesagter Wert")
+  ggtitle("Residuum vs Vorhergesagter Wert")
 
 # 2. Normal Q-Q
 p2 <- ggplot(df, aes(sample = resid)) +
   stat_qq() +
   stat_qq_line(colour = "red") +
-  ggtitle("2.) Normal Q-Q-Plot")
+  ggtitle("Normal Q-Q-Plot")
 
 # 3. Histogram of residuals
 p3 <- ggplot(df, aes(x=resid)) +
   geom_histogram(binwidth = 0.5) +
-  ggtitle("3.) Histogramm der Residuen")
+  ggtitle("Histogramm der Residuen")
 
 # 4. Scatter Plot
 p4 <- ggplot(df, aes(x=Days, y=Weight)) +
@@ -325,6 +329,11 @@ library(gridExtra)
 # Arrange the plots in a 4x1 grid
 grid.arrange(p1, p2, p3, p4, nrow = 2)
 ```
+Die Grafiken zeigen, dass die Residuen nicht normalverteilt sind. Sie zeigen ein Muster.
+D.h. das linerare Modell ist kein gut geeignetes für den Datensatz.
+Zur weiteren Veranschaulichung erfolgt eine Darstellung des linearen Modells inklusive
+Konfidenz- und Vorhersage-Intervall.
+
 ```{r}
 # 1. Add predictions 
 pred.int <- predict(model, interval = "prediction")
@@ -338,6 +347,10 @@ p <- ggplot(mydata, aes(x=Days, y=Weight)) +
 p + geom_line(aes(y = lwr), color = "red", linetype = "dashed")+
     geom_line(aes(y = upr), color = "red", linetype = "dashed")
 ```
+Um ein besseres Regressionsmodell zu finden, wird R^2 and RMSE für das
+lineare Modell, ein logarithmesches, ein quadratisches, kubisches und
+ein Polynom 5. Grades berechnet. 
+
 ```{r}
 # Load necessary library
 library(caret)
@@ -363,6 +376,10 @@ for (model in models) {
   cat("\n")
 }
 ```
+Das quadratische Modell stellt eine hinreichende Verbesserung im Vergleich zum
+linearen dar. Polynome höhrer Ordnung verbessern R^2 und RMSE nur geringfügig.
+Um die Güte des quadratischen Modells zu beurteilen, erfolgt die Residualanalyse.
+
 ```{r}
 
 # Calculate the logarithm of a column and overwrite the old values
@@ -406,6 +423,8 @@ library(gridExtra)
 # Arrange the plots in a 4x1 grid
 grid.arrange(p1, p2, p3, p4, nrow = 2)
 ```
+Die Grafiken zeigen, dass die Residuen normalverteilt sind und kein eindeutiges
+Muster erkennen lassen. Das quadratische Modell ist daher hinreichend gut.
 
 **[1P] b:** Welches Gewicht hat der Patient nach 30 Tagen bzw. nach 200 Tagen Diät?
 
@@ -423,6 +442,10 @@ prediction_interval <- predict(models[[1]], newdata = new_data, interval = "pred
 print(confidence_interval)
 print(prediction_interval)
 ```
+Laut dem linearen Modell beträgt das Gewicht des Patienten nach 30 Tagen 168.17 kg 
+(Konfidenzintervall [166.54,169.80], Vorhersageintervall [160.68,175.66])
+und nach 200 Tagen 118.74 kg
+(Konfidenzintervall [117.21,120.28], Vorhersageintervall [111.27,126.21]).
 
 ```{r}
 # Define new data frame with the single x value
@@ -438,6 +461,10 @@ prediction_interval <- predict(models[[3]], newdata = new_data, interval = "pred
 print(confidence_interval)
 print(prediction_interval)
 ```
+Laut dem quadratischen Modell beträgt das Gewicht des Patienten nach 30 Tagen 170.26 kg 
+(Konfidenzintervall [169.81,170.71], Vorhersageintervall [168.32,172.20])
+und nach 200 Tagen 119.74 kg
+(Konfidenzintervall [119.34,120.15], Vorhersageintervall [117.81,121.67]).
 
 # 4 Multiple Regressionsanalyse [3P]
 Die Framingham-Herz-Studie war ein Wendepunkt bei der Identifizierung von Risikofaktoren für koronare Herzkrankheiten und ist eine der wichtigsten epidemiologischen Studien die je durchgeführt wurden. Ein großer Teil unseres heutigen Verständnisses von Herz-Kreislauf-Erkrankungen ist auf diese Studie zurückzuführen. Der Datensatz `Framingham.sav` enthält Varibalen hinsichtlich Demographie, Verhaltensweise, Krankengeschichte und Risikofaktoren. Finden Sie ein geeignetes Modell, dass den systolischen Blutdruck (`sysbp`) beschreibt. Vermeiden Sie nicht relevante bzw. redundante Variablen (z.B. "Incident" Variablen). Achten Sie auf Ausreißer und fehlende Daten (`NaN, NA's`). 
@@ -448,6 +475,7 @@ i) Modellgleichung inklusive 95% Konfidenzintervall der Modellparameter
 i) Interpretation des Ergebnisses hinsichtlich Signifikanz
 i) Beurteilung der Modellgüte und Residuenanalyse
 
+Die folgende Sektion ist nur eine experimentelle Vorarbeit und kein Teil der Antwort.
 ```{r}
 # Import the data
 # Load necessary library
@@ -469,12 +497,28 @@ summary(max_model)
 coefficients <- coef(max_model)
 
 # Calculate confidence intervals
-conf_intervals <- confint(max_model)
+conf_intervals <- confint(max_model, level = 0.95)
 
 # Print coefficients and their confidence intervals
 for (i in 1:length(coefficients)) {
   cat(names(coefficients)[i], ": ", coefficients[i], ", CI: [", conf_intervals[i, 1], ", ", conf_intervals[i, 2], "]\n")
 }
+```
+Für das multiple Regressionsmodell wurden folgende Variablen mit eingeschlossen:
+Geschlecht, Alter, Bildungsstand, Raucherstatus, Zigaretten pro Tag,
+die Einnahme blutdrucksenkender Medikamente, Cholesterol, diastolischer Blutdruck,
+Body Mass Index, Diagnose Diabetes, Herzrate und Glukosewert.
+Davon sind Geschlecht, Bildungsstand, Raucherstatus,
+die Einnahme blutdrucksenkender Medikamente und die Diagnose Diabetes
+kategorialen Variablen.
+
+```{r}
+# Import the data
+# Load necessary library
+library(haven)
+
+# Read in .sav file
+data <- read_spss("Framingham.sav")
 
 # Convert the educ variable to a factor
 data$educ <- as.factor(data$educ)
@@ -488,90 +532,133 @@ data$sex <- as.factor(data$sex)
 # Set "1" as the reference level for the educ variable
 data$sex <- relevel(data$sex, ref = "1")
 
-model <- lm(sysbp ~ sex + age + educ + cigpday + bpmeds + totchol + diabp + bmi + diabetes + heartrte + glucose, data = data)
+# Convert the cursmoke variable to a factor
+data$cursmoke <- as.factor(data$cursmoke)
+
+# Set "0" as the reference level for the cursmoke variable
+data$cursmoke <- relevel(data$cursmoke, ref = "0")
+
+# Convert the bpmeds variable to a factor
+data$bpmeds <- as.factor(data$bpmeds)
+
+# Set "0" as the reference level for the bpmeds variable
+data$bpmeds <- relevel(data$bpmeds, ref = "0")
+
+# Convert the diabetes variable to a factor
+data$diabetes <- as.factor(data$diabetes)
+
+# Set "0" as the reference level for the diabetes variable
+data$diabetes <- relevel(data$diabetes, ref = "0")
+
+model <- lm(sysbp ~ sex + age + educ + cursmoke + cigpday + bpmeds + totchol + diabp + bmi + diabetes + heartrte + glucose, data = data)
 
 summary(model)
-# # Convert the region variable to a factor
-# data$region <- as.factor(data$region)
-# 
-# # Set "Europe" as the reference level for the region variable
-# data$region <- relevel(data$region, ref = "Europe")
-# 
-# # Fit a linear model with infant as a function of region only
-# model <- lm(infant ~ region, data = data)
-# 
-# # Print the model equation and 95% confidence intervals
-# summary(model)
-# confint(model, level=0.95)
+
+# Extract coefficients
+coefficients <- coef(model)
+
+# Calculate confidence intervals
+conf_intervals <- confint(model, level = 0.95)
+
+# Print coefficients and their confidence intervals
+for (i in 1:length(coefficients)) {
+  cat(names(coefficients)[i], ": ", coefficients[i], ", CI: [", conf_intervals[i, 1], ", ", conf_intervals[i, 2], "]\n")
+}
 ```
+6 von 15 Modellparametern sind nicht signifikant. Diese sind
+educ2 (High School) cursmoke1 (positiver Raucherstatus), cigpday (Zigaretten pro Tag),
+totchol (Cholesterol), bmi (Body Mass Index) und diabetes1 (positive Diabetes Diagnose).
+
+Nicht erklärbar ist der positive Wert von bpmeds1
+(vorhandene Einnahme von Blutdrucksenkern). Dieses hochsignifikatne Ergebnis
+besagt, dass Blutdrucksenker den systolischen Blutdruck erhöhen!
+
 ```{r}
 # Convert model's data to a data frame
 model_data <- data[complete.cases(data), ]  # remove rows with missing values
 df <- data.frame(resid = resid(model), fitted = fitted(model),
-                 sysbp = model_data$sysbp, bmi = model_data$bmi)
+                 sysbp = model_data$sysbp, sex = model_data$sex, age = model_data$age, educ = model_data$educ, cursmoke = model_data$cursmoke, cigpday = model_data$cigpday, bpmeds = model_data$bpmeds, totchol = model_data$totchol, diabp = model_data$diabp, bmi = model_data$bmi, diabetes = model_data$diabetes, heartrte = model_data$heartrte, glucose = model_data$glucose)
 
 # Load ggplot2
 library(ggplot2)
 
+# Create a function to generate scatter plots
+scatter_plot <- function(df, x_var, y_var = "sysbp", title) {
+  ggplot(df, aes_string(x = x_var, y = y_var)) +
+    geom_jitter(width = 0.0) +
+    ggtitle(title)
+}
+
 # Create the four diagnostic plots
-# 1. Residuals vs Fitted
 p1 <- ggplot(df, aes(fitted, resid)) +
   geom_point() +
-  #geom_smooth(se = FALSE) +
-  ggtitle("1.) Residuum vs Vorhergesagter Wert")
+  ggtitle("Residuum vs Vorhergesagter Wert")
 
-# 2. Normal Q-Q
 p2 <- ggplot(df, aes(sample = resid)) +
   stat_qq() +
   stat_qq_line(colour = "red") +
-  ggtitle("2.) Normal Q-Q-Plot")
+  ggtitle("Normal Q-Q-Plot")
 
-# 3. Histogram of residuals
 p3 <- ggplot(df, aes(x=resid)) +
-  geom_histogram(binwidth = 0.5) +
-  ggtitle("3.) Histogramm der Residuen")
+  geom_histogram(binwidth = 5) +
+  ggtitle("Histogramm der Residuen")
 
-# 4. Scatter Plot
-p4 <- ggplot(df, aes(x=sysbp, y=sex)) +
-  geom_jitter(width=0.0) +
-  ggtitle("Streudiagramm Gewicht")
+# Create scatter plots using the function
+p4 <- scatter_plot(df, "sex", title = "Streudiagramm Geschlecht")
+p5 <- scatter_plot(df, "educ", title = "Streudiagramm Bildung")
+p6 <- scatter_plot(df, "cursmoke", title = "Streudiagramm Raucher")
+p7 <- scatter_plot(df, "cigpday", title = "Streudiagramm Zigaretten")
+p8 <- scatter_plot(df, "bmi", title = "Streudiagramm BMI")
+p9 <- scatter_plot(df, "bpmeds", title = "Streudiagramm Blutdrucksenker")
+p10 <- scatter_plot(df, "totchol", title = "Streudiagramm Cholesterol")
+p11 <- scatter_plot(df, "diabp", title = "Streudiagramm Diast. Blutdruck")
+p12 <- scatter_plot(df, "diabetes", title = "Streudiagramm Diabetes")
+p13 <- scatter_plot(df, "heartrte", title = "Streudiagramm Herzrate")
+p14 <- scatter_plot(df, "glucose", title = "Streudiagramm Glukose")
 
-# 5. Scatter Plot
-p5 <- ggplot(df, aes(x=sysbp, y=age)) +
-  geom_jitter(width=0.0) +
-  ggtitle("Streudiagramm Gewicht")
-
-# 6. Scatter Plot
-p6 <- ggplot(df, aes(x=sysbp, y=bmi)) +
-  geom_jitter(width=0.0) +
-  ggtitle("Streudiagramm Gewicht")
-
-# 7. Scatter Plot
-p7 <- ggplot(df, aes(x=sysbp, y=bpmeds)) +
-  geom_jitter(width=0.0) +
-  ggtitle("Streudiagramm Gewicht")
-
-# 8. Scatter Plot
-p8 <- ggplot(df, aes(x=sysbp, y=totchol)) +
-  geom_jitter(width=0.0) +
-  ggtitle("Streudiagramm Gewicht")
-
-# sex + age + educ + cigpday + bpmeds + totchol + diabp + bmi + diabetes + heartrte + glucose
-
-# Load gridExtra
-library(gridExtra)
-
-# Arrange the plots in a 4x1 grid
-grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, nrow = 2)
+# Arrange the plots
+grid.arrange(p1, p2, p3, nrow = 1)
+grid.arrange(p7, p8, p10, p11, p13, p14, nrow = 2)
+grid.arrange(p4, p5, p6, p9, p12, nrow = 2)
 ```
+Selbst wenn man die 4 stärksten Ausreißer unter den Residuen größer 55 entfernt,
+bleibt ersichtlich, dass die Verteilung der Residuen rechtsschief ist.
+Die Güte des Modells ist daher fragwürdig.
 
 **[1P] b:** Welchen systolischen Blutdruck hat eine Person mit folgendem Profil:
 
 Frau, 50 Jahre, High School, Raucher, 8 Zig/Tag, keine Blutdruck senkenden Medikamente, 220 mg/dl Serum Cholesterol, 85 mmHg diastolischer Blutdruck, BMI von 30, kein Diabetes, 90 bpm Herzrate und Glukoselevel von 90 mg/dl.
 
 ```{r}
+# Create a new data frame that contains the person's profile
+new_data <- data.frame(
+  sex = factor("2", levels = c("1","2")), # Female
+  age = 50,
+  educ = factor("2", levels = c("1","2","3","4")), # High School
+  cursmoke = factor("1", levels = c("0","1")), # Yes
+  cigpday = 8,
+  bpmeds = factor("0", levels = c("0","1")), # No
+  totchol = 220,
+  diabp = 85,
+  bmi = 30,
+  diabetes = factor("0", levels = c("0","1")), # No
+  heartrte = 90,
+  glucose = 90
+)
 
+# Predict the systolic blood pressure
+predicted_sysbp <- predict(model, newdata = new_data)
 
+print(predicted_sysbp)
+
+# Get the confidence interval for the predicted value
+predicted_sysbp_conf_int <- predict(model, newdata = new_data, interval = "confidence")
+print(predicted_sysbp_conf_int)
+
+# Get the prediction interval for the predicted value
+predicted_sysbp_pred_int <- predict(model, newdata = new_data, interval = "prediction")
+print(predicted_sysbp_pred_int)
 ```
-
+Der systolische Blutdruck der Person mit dem gegebenen Profil ist 138.4 mmHg
+(Konfidenzintervall [137.1,139.7], Vorhersageintervall [114.0,162.9]).
 
