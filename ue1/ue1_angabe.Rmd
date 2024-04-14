@@ -19,27 +19,27 @@ Für Menschen, die ihren Blutdruck senken wollen, ist eine häufig empfohlene Vo
 **[2P] a:** Importieren Sie den Datensatz `intersalt.csv`. Erstellen Sie zwei Regressionsmodelle für den diastolische Blutdruck (bp) in Abhängigkeit der Natriumausscheidung (na). Das erste Modell soll alle Datenpunkte verwenden. Für das zweite Modell sollen die vier Datenpunkte mit der geringsten Natriumausscheidung aus dem Datensatz entfernt werden.
 
 ```{r}
-# Daten einlesen
+# import intersalt data
 intersalt <- read.csv("intersalt.csv", sep = ";", dec = ",")
 
-# Überblick über die Daten
+# summary of intersalt data
 str(intersalt)
 
-# Umwandlung der Variablen vom Typ Character in numerische Variablen
+# transform variables from character to numeric
 intersalt$b <- as.numeric(intersalt$b)
 intersalt$bp <- as.numeric(intersalt$bp)
 intersalt$na <- as.numeric(intersalt$na)
 
-# Erstes Modell (alle Datenpunkte)
+# first model (all data points)
 model_1 <- lm(bp ~ na, data = intersalt)
 
-# Datensatz nach Natriumausscheidung sortieren
+# sort data by na
 intersalt_sorted <- intersalt[order(intersalt$na),]
 
-# Enfernen der ersten vier Datenpunkte
+# new data set without the 4 smallest na values
 intersalt_m2 <- intersalt_sorted[-c(1:4),]
 
-# Zweites Modell
+# second model (without 4 smallest na values)
 model_2 <- lm(bp ~ na, data = intersalt_m2)
 
 ```
@@ -54,25 +54,26 @@ i) Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall
 
 **Modell 1**
 ```{r}
-# Zusammenfassung und KI-Intervall für model_1
+# summary and confidence interval for model_1
 summary(model_1)
 confint(model_1)
 ```
 
-Die Modellgleichung für das erste Modell lautet: bp = 67.56 [63.25;71.87] + 0.038 [0.01;0.07] * na. 
+i) Die Modellgleichung für das erste Modell lautet: bp = 67.56 [63.25;71.87] + 0.038 [0.01;0.07] * na. 
+
+ii) Interpretation der Signifikanz und Modellgüte:
 
 **Intercept:** Das 95\% Konfidenzintervall für den Intercept liegt zwischen 63.25123 und 71.87368. Das bedeutet, dass der diastolische Blutdruck bei einer Natriumausscheidung von 0 mmol/24h mit einer 95\%igen Sicherheit zwischen 63.25 und 71.87 mmHg liegt.
 
-**Steigung:** Das 95\% Konfidenzintervall für die Steigung bezüglich der Natriumausscheidung liegt zwischen 0.00988 und 0.06548. Wir können also mit 95\%iger Sicherheit sagen, dass der Anstieg des diastolische Blutdruck zwischen 0.00988 und 0.06548 liegt, wenn die Natriumausscheidung um 1 mmol/24h steigt.
+**Steigung:** Das 95\% Konfidenzintervall für die Steigung bezüglich der Natriumausscheidung liegt zwischen 0.00988 und 0.06548. Wir können also mit 95\%iger Sicherheit sagen, dass der Anstieg des diastolische Blutdruck zwischen 0.00988 und 0.06548 beträgt, wenn die Natriumausscheidung um 1 mmol/24h steigt.
 
 **Signifikanz und Modellgüte:** 
 Die Signifikanz des p-Wertes für die Steigung (p = 0.0089) deutet auf einen statistisch signifikanten Zusammenhang zwischen der Natriumausscheidung und dem diastolischen Blutdruck hin. Der p-Wert für den Intercept dieses Modells ist sogar als hochsignifikant zu werten. Ein Wert von 0.1291 für das Bestimmtheitsmaß R^2 zeigt jedoch, dass das Modell nur etwa 12.91\% der Variabilität im diastolischen Blutdruck mit der Natriumausscheidung erklären kann. Die Erkenntnis daraus ist, dass noch andere Faktor den Blutdruck beeinflussen. 
 
-
-i) Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall
+iii) Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall
 
 ```{r}
-# Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall für model_1
+# regression plot for model_1
 library(ggplot2)
 ggplot(intersalt, aes(x = na, y = bp)) +
   geom_point() +
@@ -85,13 +86,15 @@ ggplot(intersalt, aes(x = na, y = bp)) +
 
 
 ```{r}  
-# Zusammenfassung und KI-Intervall für model_2
+# summary and confidence interval for model_2
 summary(model_2)
 confint(model_2)
 
 ```
 
-Die Modellgleichung für das zweite Modell lautet: bp = 81.06 [74.40;87.72] - 0.045 [-0.09;0.00] * na.
+i) Die Modellgleichung für das zweite Modell lautet: bp = 81.06 [74.40;87.72] - 0.045 [-0.09;0.00] * na.
+
+ii) Interpretation der Signifikanz und Modellgüte: \newline
 
 **Intercept:** Das 95% Konfidenzintervall für den Intercept liegt zwischen 74.40191 und 
 87.72479. Das bedeutet, dass der diastolische Blutdruck laut diesem Modell bei einer Natriumausscheidung von 0 mmol/24h mit einer 95%igen Sicherheit zwischen 74.40 und 87.72 mmHg liegt.
@@ -100,10 +103,10 @@ Die Modellgleichung für das zweite Modell lautet: bp = 81.06 [74.40;87.72] - 0.
 
 **Signifikanz und Modellgüte:** Auch bei diesem Modell ist der p-Wert für den Intercept hochsignifikant. Der p-Wert für die Steigung ist mit 0.035 zwar signifikant, aber deutlich weniger als der p-Wert für die Steigung des ersten Modells. Das Bestimmtheitsmaß R^2 beträgt hier 0.09, was bedeutet, dass das Modell nur etwa 9% der Variabilität im diastolischen Blutdruck mit der Natriumausscheidung erklären kann, wobei es beim ersten Modell noch knapp 13% waren.
 
-i) Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall
+iii) Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall
 
 ```{r}
-# Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall für model_2
+# regression plot for model_2
 ggplot(intersalt_m2, aes(x = na, y = bp)) +
   geom_point() +
   geom_smooth(method = "lm", se = TRUE) +
@@ -112,7 +115,7 @@ ggplot(intersalt_m2, aes(x = na, y = bp)) +
        y = "Diastolischer Blutdruck (mmHg)")
 ```
 
-Vergleichen Sie beide Modelle. Was können Sie beobachten
+Vergleichen Sie beide Modelle. Was können Sie beobachten?
 
 Die signifikante Änderung der Richtung des Effekts (von positiv zu negativ) nach dem Entfernen der vier Datenpunkte mit der niedrigsten Natriumausscheidung legt nahe, dass diese Datenpunkte einen erheblichen Einfluss auf das Gesamtergebnis des Modells haben.
 
@@ -120,11 +123,14 @@ Ein niedrigerer Wert für R^2 im zweiten Modell könnte bedeuten, dass die vier 
 
 Trotz der signifikanten Koeffizienten in beiden Modellen bleiben die R^2 Werte relativ niedrig. Somit wird deutlich, dass noch weitere, hier nicht betrachtete Variablen einen Einfluss auf den diastolischen Blutdruck haben.
 
+**[2P] b:** Lesen Sie den Artikel "The (Political) Science of Salt" und vergleichen Sie damit Ihre Beobachtungen. Gibt es Faktoren die in Ihren Modellen eventuell nicht berücksichtigt wurden? Wie lautet die Schlussfolgerung - führt eine Reduktion der Salzaufnahme zu einer Blutdrucksenkung?
 
-**[2P] b:** Lesen Sie den Artikel "The (Political) Science of Salt" und vergleichen Sie damit Ihre Beobachtungen. Gibt es Faktoren die in Ihren Modellen eventuell nicht berücksichtigt wurden? Wie lautet die Schlussfolgerung - führt eine Reduktion der Salzaufnahme zu einer Blutdrucksenkung? 
+*Zusammenfassung des Artikels "The (Political) Science of Salt":*
+Die Intersalt-Studie, eine standardisierte, internationale Untersuchung mit einer großen Stichprobe von über 10000 Teilnehmenden, bietet einen tiefgehenden Einblick in den Zusammenhang zwischen Salzaufnahme und Blutdruck. Die Ergebnisse variieren beträchtlich zwischen verschiedenen geografischen Regionen, wobei extrem niedrige Natriumwerte in einigen isolierten Gemeinschaften mit niedrigem Blutdruck und geringem altersbedingten Anstieg des Blutdrucks korrelierten. Im Gegensatz dazu zeigten andere Studienzentren signifikante Zusammenhänge zwischen Natriumausscheidung und Blutdruckanstieg. Obwohl die Studie einen Trend zu niedrigerem Blutdruck bei geringerer Salzaufnahme andeutet, sind die Ergebnisse durch die Heterogenität der teilnehmenden Populationen und die Vielzahl der berücksichtigten Einflussgrößen wie Body-Mass-Index und Alkoholkonsum komplex.
 
-Modellierung der Daten: Obwohl das lineare Modell signifikante Zusammenhänge zwischen Natriumaufnahme und Blutdruck gefunden hat, legen die Ergebnisse nahe, dass der Zusammenhang komplex ist und möglicherweise von weiteren Faktoren beeinflusst wird, die in einfacheren Modellen nicht berücksichtigt werden.
-Schlussfolgerung hinsichtlich Salzaufnahme und Blutdrucksenkung: Die Studie legt nahe, dass eine Reduktion der Salzaufnahme zu einer Senkung des Blutdrucks führen kann, besonders über längere Zeiträume und Lebensspannen hinweg betrachtet. Allerdings scheint der Effekt von der Höhe der Salzaufnahme und von anderen Variablen beeinflusst zu werden.
+*Modellierung der Daten:* Obwohl das lineare Modell signifikante Zusammenhänge zwischen Natriumaufnahme und Blutdruck gefunden hat, zeigen die Ergebnisse, dass der Zusammenhang komplex ist und möglicherweise von weiteren Faktoren beeinflusst wird, die in einfacheren Modellen nicht berücksichtigt werden. 
+
+*Schlussfolgerung hinsichtlich Salzaufnahme und Blutdrucksenkung:* Die Studie legt nahe, dass eine Reduktion der Salzaufnahme zu einer Senkung des Blutdrucks führen kann, besonders über längere Zeiträume und Lebensabschnitte hinweg betrachtet. Es konnte gezeigt werden, dass der Zusammenhang jedoch bei älteren Personen ausgeprägter ist als bei jüngeren. Insgesamt liefern die Ergebnisse der Studie starke Belege dafür, dass eine Reduktion der Salzaufnahme eine effektive Maßnahme zur Blutdrucksenkung darstellt, insbesondere in Bevölkerungsgruppen mit hohem Blutdruck oder erhöhtem Risiko für Herz-Kreislauf-Erkrankungen.
 
 
 # 2 Lineare Regressionsanalyse (kategorisch) [3P]
@@ -146,14 +152,14 @@ data$region <- as.factor(data$region)
 # Set "Europe" as the reference level for the region variable
 data$region <- relevel(data$region, ref = "Europe")
 
-# Fit a linear model with infant as a function of region only
+# Fit a linear model with infant as a function of region
 model <- lm(infant ~ region, data = data)
 
 # Print the model equation and 95% confidence intervals
 summary(model)
 confint(model, level=0.95)
 ```
-Der p-WErt der F-Stastik liegt unter 5%&, was bedeuet, dass mindestens ein
+Der p-Wert der F-Stastik liegt unter 5%&, was bedeuet, dass mindestens ein
 Koeffizient signifikant ist.
 
 Der p-Wert der erwarteten Kindersterblichkeit für Europa "(Intercept)" liegt
@@ -163,26 +169,23 @@ zu Kindersterblichkeit gleich 0.
 
 Der p-Wert der erwarteten Differenz in der Kindersterblichkeit zwischen Europa
 und Amerika "regionAmericas" liegt auch über 5%. D.h. es gibt keinen signifikanten
-Unterschied in der Kindeersterblichkeit zwischen Euorpa und Amerika.
+Unterschied in der Kindersterblichkeit zwischen Euorpa und Amerika.
 
 Die p-Werte der erwareten Differenzen in der Kindersterblichkeit zwischen den
-übrigen Regionen und Europa liegen unter 5%. D.h. es gibt einen signfikanten
-Unterschied in der Kindersterblichkeit zu Europa.
+übrigen Regionen und Europa liegen unter 5%. Hier gibt es also, basierend auf den Daten dieser Stichprobe einen signfikanten Unterschied in der Kindersterblichkeit zu Europa.
 
-Der adjusted R^2 beträgt 23%. D.h. 23% der Varianz in der (relativen)
-Kindersterblichkeit können durch eine Änderung in den (binären)
-Prädiktor-Variablen bestimmt werden.
-
+Der adjusted R^2 beträgt 23%. Somit können 23% der Varianz in der (relativen)
+Kindersterblichkeit durch eine Änderung in den (binären) Prädiktor-Variablen bestimmt werden.
 
 ```{r}
 # Interpret the significance of the results
+
 # The p-value for each term tests the null hypothesis that the coefficient is equal to zero (no effect).
 # A low p-value (< 0.05) indicates that you can reject the null hypothesis.
 
 # Assess the quality of the model and perform a residual analysis
 #par(mfrow=c(2,2))
 #plot(model)
-
 
 # Convert model's data to a data frame
 model_data <- data[complete.cases(data), ]  # remove rows with missing values
@@ -192,12 +195,12 @@ df <- data.frame(resid = resid(model), fitted = fitted(model),
 # Load ggplot2
 library(ggplot2)
 
-# Create the four diagnostic plots
+# plots of residual analysis
 # 1. Residuals vs Fitted
 p1 <- ggplot(df, aes(fitted, resid)) +
   geom_point() +
   #geom_smooth(se = FALSE) +
-  ggtitle("1.) Residuum vs Vorhergesagter Wert")
+  ggtitle("1.) Residuum vs. Vorhergesagter Wert")
 
 # 2. Normal Q-Q
 p2 <- ggplot(df, aes(sample = resid)) +
@@ -221,8 +224,6 @@ library(gridExtra)
 # Arrange the plots in a 4x1 grid
 grid.arrange(p1, p2, p3, p4, nrow = 2)
 
-
-
 ```
 Die Region Asien zeigt 3 Ausreißer nach oben, die besonders ins Auge stechen.
 Wenn man sie ignoriert, kann man eine annährende Normalverteilung der Residuen
@@ -234,10 +235,6 @@ scheint die Standardabweichung der Residuen nach Region unterschiedlich zu sein.
 Insgesamt entsteht aber der Eindruck, dass eine Normalverteilung der Residuen
 vorliegt und ihre Varianz in etwa gleich bleibt
 (d.h. Homoskedastizität gegeben ist). 
-```{r}
-#installed_packages <- installed.packages()
-#print(installed_packages)
-```
 
 **[1P] b:** Wie hoch ist die Kindersterblichkeit in Europa und wie hoch in Afrika (inkl. Unsicherheit)?
 
@@ -277,18 +274,18 @@ i) Grafische Darstellung der Regressionsgeraden inkl. Konfidenz-und Vorhersagein
 
 ```{r}
 library(readxl)
-# Import the data
+# import the data
 data <- read_excel("wtloss.xlsx")
 
-# Fit a linear model with infant as a function of region only
+# fit a linear model
 model <- lm(Weight ~ Days, data = data)
 
-# Print the model equation and 95% confidence intervals
+# print the model equation and 95% confidence intervals
 summary(model)
 confint(model, level=0.95)
 ```
-Laut der p-Werte (p<0.01) und zugehörigen Konfidenzintervalle liefert das lineare Regressionsmodell
-hochsignfikante Ergebnisse für die Konstante und den Koeffizienten in
+
+Laut der p-Werte (p<0.01) und zugehörigen Konfidenzintervalle liefert das lineare Regressionsmodell hochsignfikante Ergebnisse für die Konstante und den Koeffizienten in
 Weight = (Intercept) + Days * x
 
 ```{r}
@@ -330,7 +327,7 @@ library(gridExtra)
 grid.arrange(p1, p2, p3, p4, nrow = 2)
 ```
 Die Grafiken zeigen, dass die Residuen nicht normalverteilt sind. Sie zeigen ein Muster.
-D.h. das linerare Modell ist kein gut geeignetes für den Datensatz.
+D.h. das linerare Modell ist nicht sehr gut geeignet für den Datensatz.
 Zur weiteren Veranschaulichung erfolgt eine Darstellung des linearen Modells inklusive
 Konfidenz- und Vorhersage-Intervall.
 
@@ -370,6 +367,8 @@ models <- list(linear_model, logarithmic_model, quadratic_model, cubic_model, fi
 
 # Calculate R^2 and RMSE for each model
 for (model in models) {
+  # output title of model
+  cat(paste("Model: ", deparse(model$call), "\n"))
   print(summary(model)$r.squared) # R^2
   print(summary(model)$adj.r.squared) # Adjusted R^2
   print(sqrt(mean(resid(model)^2))) # RMSE
@@ -424,7 +423,7 @@ library(gridExtra)
 grid.arrange(p1, p2, p3, p4, nrow = 2)
 ```
 Die Grafiken zeigen, dass die Residuen normalverteilt sind und kein eindeutiges
-Muster erkennen lassen. Das quadratische Modell ist daher hinreichend gut.
+Muster erkennen lassen. Das quadratische Modell ist daher hinreichend gut geeignet zur Modellierung dieser Daten.
 
 **[1P] b:** Welches Gewicht hat der Patient nach 30 Tagen bzw. nach 200 Tagen Diät?
 
