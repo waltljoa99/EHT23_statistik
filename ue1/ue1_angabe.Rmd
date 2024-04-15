@@ -25,11 +25,6 @@ intersalt <- read.csv("intersalt.csv", sep = ";", dec = ",")
 # summary of intersalt data
 str(intersalt)
 
-# transform variables from character to numeric
-intersalt$b <- as.numeric(intersalt$b)
-intersalt$bp <- as.numeric(intersalt$bp)
-intersalt$na <- as.numeric(intersalt$na)
-
 # first model (all data points)
 model_1 <- lm(bp ~ na, data = intersalt)
 
@@ -85,6 +80,8 @@ ggplot(intersalt, aes(x = na, y = bp)) +
 ```
 
 
+**Modell 2**
+
 ```{r}  
 # summary and confidence interval for model_2
 summary(model_2)
@@ -97,7 +94,7 @@ i) Die Modellgleichung für das zweite Modell lautet: bp = 81.06 [74.40;87.72] -
 ii) Interpretation der Signifikanz und Modellgüte: \newline
 
 **Intercept:** Das 95% Konfidenzintervall für den Intercept liegt zwischen 74.40191 und 
-87.72479. Das bedeutet, dass der diastolische Blutdruck laut diesem Modell bei einer Natriumausscheidung von 0 mmol/24h mit einer 95%igen Sicherheit zwischen 74.40 und 87.72 mmHg liegt.
+87.72479. Das bedeutet, dass der diastolische Blutdruck laut diesem Modell bei einer hypothetischen Natriumausscheidung von 0 mmol/24h mit einer 95%igen Sicherheit zwischen 74.40 und 87.72 mmHg liegt.
 
 **Steigung:** Das 95% Konfidenzintervall für die Steigung bezüglich der Natriumausscheidung liegt zwischen -0.08602 und -0.00337. In diesem Fall ist also von einer Abnahme des diastolischen Blutdrucks um 0.00337 bis 0.08602 mmHg auszugehen, wenn die Natriumausscheidung um 1 mmol/24h steigt. Im Gegensatz zum ersten Modell zeigt die Steigung hier also einen negativen Zusammenhang zwischen Natriumausscheidung und diastolischem Blutdruck.  
 
@@ -123,18 +120,34 @@ Ein niedrigerer Wert für R^2 im zweiten Modell könnte bedeuten, dass die vier 
 
 Trotz der signifikanten Koeffizienten in beiden Modellen bleiben die R^2 Werte relativ niedrig. Somit wird deutlich, dass noch weitere, hier nicht betrachtete Variablen einen Einfluss auf den diastolischen Blutdruck haben.
 
+```{r}
+# graphical comparison of both models
+ggplot(intersalt, aes(x = na, y = bp)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, color = "blue") +
+  geom_smooth(data = intersalt_m2, method = "lm", se = TRUE, color = "red") +
+  labs(title = "Diastolischer Blutdruck in Abhängigkeit der Natriumausscheidung",
+       x = "Natriumausscheidung (mmol/24h)",
+       y = "Diastolischer Blutdruck (mmHg)",
+       color = "Model") +
+  scale_color_manual(values = c("blue", "red"))
+```
+
+
 **[2P] b:** Lesen Sie den Artikel "The (Political) Science of Salt" und vergleichen Sie damit Ihre Beobachtungen. Gibt es Faktoren die in Ihren Modellen eventuell nicht berücksichtigt wurden? Wie lautet die Schlussfolgerung - führt eine Reduktion der Salzaufnahme zu einer Blutdrucksenkung?
 
 *Zusammenfassung des Artikels "The (Political) Science of Salt":*
 Die Intersalt-Studie, eine standardisierte, internationale Untersuchung mit einer großen Stichprobe von über 10000 Teilnehmenden, bietet einen tiefgehenden Einblick in den Zusammenhang zwischen Salzaufnahme und Blutdruck. Die Ergebnisse variieren beträchtlich zwischen verschiedenen geografischen Regionen, wobei extrem niedrige Natriumwerte in einigen isolierten Gemeinschaften mit niedrigem Blutdruck und geringem altersbedingten Anstieg des Blutdrucks korrelierten. Im Gegensatz dazu zeigten andere Studienzentren signifikante Zusammenhänge zwischen Natriumausscheidung und Blutdruckanstieg. Obwohl die Studie einen Trend zu niedrigerem Blutdruck bei geringerer Salzaufnahme andeutet, sind die Ergebnisse durch die Heterogenität der teilnehmenden Populationen und die Vielzahl der berücksichtigten Einflussgrößen wie Body-Mass-Index und Alkoholkonsum komplex.
 
-*Modellierung der Daten:* Obwohl das lineare Modell signifikante Zusammenhänge zwischen Natriumaufnahme und Blutdruck gefunden hat, zeigen die Ergebnisse, dass der Zusammenhang komplex ist und möglicherweise von weiteren Faktoren beeinflusst wird, die in einfacheren Modellen nicht berücksichtigt werden. 
+*Vergleich mit Intersalt-Studie:* Die Zusammenfassung der Intersalt-Studie deutet auf eine positive Assoziation zwischen Natriumausscheidung und Blutdruck hin, was konsistent mit den Erkenntnissen aus unserem ersten Modell ist. Die Studie fand auch signifikante positive Assoziationen nach Adjustierung auf Alter, Geschlecht und andere Faktoren wie Body-Mass-Index und Alkoholkonsum.
 
-*Schlussfolgerung hinsichtlich Salzaufnahme und Blutdrucksenkung:* Die Studie legt nahe, dass eine Reduktion der Salzaufnahme zu einer Senkung des Blutdrucks führen kann, besonders über längere Zeiträume und Lebensabschnitte hinweg betrachtet. Es konnte gezeigt werden, dass der Zusammenhang jedoch bei älteren Personen ausgeprägter ist als bei jüngeren. Insgesamt liefern die Ergebnisse der Studie starke Belege dafür, dass eine Reduktion der Salzaufnahme eine effektive Maßnahme zur Blutdrucksenkung darstellt, insbesondere in Bevölkerungsgruppen mit hohem Blutdruck oder erhöhtem Risiko für Herz-Kreislauf-Erkrankungen.
+*Nicht berücksichtigte Faktoren:* In unserem Modell haben wir nur die Natriumausscheidung als Prädiktor für den Blutdruck betrachtet. Andere Faktoren, die in der Intersalt-Studie berücksichtigt wurden, wie Geschlecht, Body-Mass-Index, Alkoholkonsum und geografische Region, könnten ebenfalls einen Einfluss auf den Blutdruck haben und wurden in unseren 'simplen' Modellen nicht berücksichtigt.
+
+*Schlussfolgerung hinsichtlich Salzaufnahme und Blutdrucksenkung:* In unserer Untersuchung konnten wir feststellen, dass ein erhöhter Salzkonsum tendenziell mit einem höheren (systolischen) Blutdruck einhergeht. Dies wird durch unser erstes Modell untermauert, das alle verfügbaren Datenpunkte berücksichtigt. Interessanterweise zeigte das zweite Modell, nach dem Ausschluss der vier niedrigsten Natriumaufnahmewerte, eine umgekehrte Beziehung, was die Sensitivität der Ergebnisse gegenüber Extremwerten verdeutlicht. Die Befunde der Intersalt-Studie bekräftigen grundsätzlich den positiven Zusammenhang zwischen Salzaufnahme und Blutdruck, insbesondere nach der Adjustierung um zusätzliche Variablen wie etwa Körpergewicht und Alkoholkonsum. Alle diese Variablen wurden in unseren Modellen nicht berücksichtigt, was etwaige Abweichungen zwischen den Studienergebnissen und unseren Analysen erklären könnte. In Anbetracht dieser Erkenntnisse erscheint es jedoch plausibel, dass die Reduzierung der Salzaufnahme einen günstigen Einfluss auf den Blutdruck hat.
 
 
 # 2 Lineare Regressionsanalyse (kategorisch) [3P]
-Der Datensatz `infant.csv` enthält Information über die unterschiedliche Kindersterblichkeit zwischen den Kontinenten. Die Variable `infant` enthält die Kindersterblichkeit in Tode pro 1000 Geburten. Unterscheidet sich die Kindersterblichkeit zwischen den Kontinenten?
+Der Datensatz `infant.csv` enthält Information über die unterschiedliche Kindersterblichkeit zwischen den Kontinenten. Die Variable `infant` enthält die Kindersterblichkeit in Tode pro 1000 Geburten. Unterscheidet sich die Kindersterblichkeit zwischen den Kontinenten?s
 
 **[2P] a:** Führen Sie eine Regressionsanalyse mit Europa als Referenz durch, welche die folgenden Punkte umfasst:
 
@@ -483,6 +496,12 @@ library(haven)
 # Read in .sav file
 data <- read_spss("Framingham.sav")
 
+# check for missing values
+sum(is.na(data))
+
+# Remove rows with missing values
+data <- data[complete.cases(data), ]
+
 # Fit a multivariate linear regression model with all variables
 max_model <- lm(sysbp ~ ., data = data)
 
@@ -510,6 +529,14 @@ Body Mass Index, Diagnose Diabetes, Herzrate und Glukosewert.
 Davon sind Geschlecht, Bildungsstand, Raucherstatus,
 die Einnahme blutdrucksenkender Medikamente und die Diagnose Diabetes
 kategorialen Variablen.
+
+```{r}
+# analyse multicollinearity
+library(car)
+vif(max_model)
+
+```
+Die Multikollinearität ist in diesem Modell nicht signifikant, da alle Variablen einen VIF-Wert unter 5 haben. Am auffälligsten sind jedoch die Variablen "cursmoke" und "cigsperday", die möglicherweise aufgrund ihrer Korrelation einen hohen VIF-Wert aufweisen. Auch die Variablen mi_fchd und cvd 
 
 ```{r}
 # Import the data
@@ -568,9 +595,10 @@ for (i in 1:length(coefficients)) {
 educ2 (High School) cursmoke1 (positiver Raucherstatus), cigpday (Zigaretten pro Tag),
 totchol (Cholesterol), bmi (Body Mass Index) und diabetes1 (positive Diabetes Diagnose).
 
-Nicht erklärbar ist der positive Wert von bpmeds1
-(vorhandene Einnahme von Blutdrucksenkern). Dieses hochsignifikatne Ergebnis
-besagt, dass Blutdrucksenker den systolischen Blutdruck erhöhen!
+Auffällig ist der stark positive Wert von bpmeds1 (vorhandene Einnahme von Blutdrucksenkern).
+Dieses hochsignifikatne Ergebnis ist auf den ersten Blick etwas überraschend, und bedeutet, dass die Einnahme von Blutdrucksenkern mit einem Anstieg des systolischen Blutdrucks einhergeht. Dies könnte jedoch durch die Tatsache erklärt werden, dass Personen, die Blutdrucksenker einnehmen, bereits einen hohen Blutdruck haben, der durch die Medikation kontrolliert werden soll. Es ist daher wichtig, dieses Ergebnis im Kontext der vorliegenden Daten und des medizinischen Hintergrunds zu interpretieren.
+
+Auch bemerkenswert ist der Einfluss des Geschlechts auf den systolischen Blutdruck. Der Koeffizient für sex2 ist positiv und hochsignifikant, was bedeutet, dass Frauen basierend auf den Daten in unserem Modell einen höheren systolischen Blutdruck haben als Männer.
 
 ```{r}
 # Convert model's data to a data frame
@@ -603,17 +631,17 @@ p3 <- ggplot(df, aes(x=resid)) +
   ggtitle("Histogramm der Residuen")
 
 # Create scatter plots using the function
-p4 <- scatter_plot(df, "sex", title = "Streudiagramm Geschlecht")
-p5 <- scatter_plot(df, "educ", title = "Streudiagramm Bildung")
-p6 <- scatter_plot(df, "cursmoke", title = "Streudiagramm Raucher")
-p7 <- scatter_plot(df, "cigpday", title = "Streudiagramm Zigaretten")
-p8 <- scatter_plot(df, "bmi", title = "Streudiagramm BMI")
-p9 <- scatter_plot(df, "bpmeds", title = "Streudiagramm Blutdrucksenker")
-p10 <- scatter_plot(df, "totchol", title = "Streudiagramm Cholesterol")
-p11 <- scatter_plot(df, "diabp", title = "Streudiagramm Diast. Blutdruck")
-p12 <- scatter_plot(df, "diabetes", title = "Streudiagramm Diabetes")
-p13 <- scatter_plot(df, "heartrte", title = "Streudiagramm Herzrate")
-p14 <- scatter_plot(df, "glucose", title = "Streudiagramm Glukose")
+p4 <- scatter_plot(df, "sex", title = "Geschlecht")
+p5 <- scatter_plot(df, "educ", title = "Bildung")
+p6 <- scatter_plot(df, "cursmoke", title = "Raucher")
+p7 <- scatter_plot(df, "cigpday", title = "Zigaretten")
+p8 <- scatter_plot(df, "bmi", title = "BMI")
+p9 <- scatter_plot(df, "bpmeds", title = "Blutdrucksenker")
+p10 <- scatter_plot(df, "totchol", title = "Cholesterol")
+p11 <- scatter_plot(df, "diabp", title = "Diast. Blutdruck")
+p12 <- scatter_plot(df, "diabetes", title = "Diabetes")
+p13 <- scatter_plot(df, "heartrte", title = "Herzrate")
+p14 <- scatter_plot(df, "glucose", title = "Glukose")
 
 # Arrange the plots
 grid.arrange(p1, p2, p3, nrow = 1)
@@ -623,6 +651,19 @@ grid.arrange(p4, p5, p6, p9, p12, nrow = 2)
 Selbst wenn man die 4 stärksten Ausreißer unter den Residuen größer 55 entfernt,
 bleibt ersichtlich, dass die Verteilung der Residuen rechtsschief ist.
 Die Güte des Modells ist daher fragwürdig.
+
+*Multiple R-Quadrat:* Das multiple R-Quadrat von 0,693 deutet darauf hin, dass das Modell in etwa 69,3% der Varianz in der Zielvariablen (systolischer Blutdruck) erklären kann.
+
+*Adjustiertes R-Quadrat:* Mit 0,6919 liegt das adjustierte R-Quadrat sehr nahe am multiplen R-Quadrat, was darauf hindeutet, dass das Modell nicht übermäßig komplex für die Menge der verfügbaren Daten ist und eine angemessene Anzahl an Prädiktoren aufweist.
+
+*F-Statistik:* Die F-Statistik ist sehr hoch mit einem sehr kleinen p-Wert, was darauf hinweist, dass das Modell insgesamt signifikant ist.
+
+*Plots der Residuen:*
+
+Residuum vs. Vohersage: Idealerweise sollten die Residuen zufällig um die 0-Linie verteilt sein. Es scheint eine gewisse Heteroskedastizität vorzuliegen, da die Varianz der Residuen mit steigenden vorhergesagten Werten scheinbar zunimmt.\newline
+Normal Q-Q-Plot: Die Punkte folgen der Referenzlinie nicht genau, insbesondere in den Enden der Verteilung. Dies deutet darauf hin, dass die Residuen nicht perfekt normalverteilt sind.\newline
+Histogramm der Residuen: Das Histogramm sieht relativ normalverteilt aus, eine leichte Rechtsschiefe ist jedoch erkennbar.
+
 
 **[1P] b:** Welchen systolischen Blutdruck hat eine Person mit folgendem Profil:
 
@@ -658,6 +699,6 @@ print(predicted_sysbp_conf_int)
 predicted_sysbp_pred_int <- predict(model, newdata = new_data, interval = "prediction")
 print(predicted_sysbp_pred_int)
 ```
-Der systolische Blutdruck der Person mit dem gegebenen Profil ist 138.4 mmHg
+Der systolische Blutdruck der Person mit dem gegebenen Profil beträgt 138.4 mmHg
 (Konfidenzintervall [137.1,139.7], Vorhersageintervall [114.0,162.9]).
 
