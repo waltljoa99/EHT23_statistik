@@ -37,6 +37,13 @@ intersalt_m2 <- intersalt_sorted[-c(1:4),]
 # second model (without 4 smallest na values)
 model_2 <- lm(bp ~ na, data = intersalt_m2)
 
+# head of intersalt data
+head(intersalt)
+
+# mean of intersalt$na
+mean(intersalt$na)
+
+# 
 ```
 
 Führen Sie für beide Modelle eine lineare Regressionsanalyse durch, die folgende Punkte umfasst:
@@ -53,6 +60,7 @@ i) Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall
 summary(model_1)
 confint(model_1)
 ```
+
 
 i) Die Modellgleichung für das erste Modell lautet: bp = 67.56 [63.25;71.87] + 0.038 [0.01;0.07] * na. 
 
@@ -358,7 +366,7 @@ p + geom_line(aes(y = lwr), color = "red", linetype = "dashed")+
     geom_line(aes(y = upr), color = "red", linetype = "dashed")
 ```
 Um ein besseres Regressionsmodell zu finden, wird R^2 and RMSE für das
-lineare Modell, ein logarithmesches, ein quadratisches, kubisches und
+lineare Modell, ein logarithmisches, ein quadratisches, kubisches und
 ein Polynom 5. Grades berechnet. 
 
 ```{r}
@@ -498,6 +506,9 @@ data <- read_spss("Framingham.sav")
 
 # check for missing values
 sum(is.na(data))
+
+# show rows with missing values
+na_rows <- data[!complete.cases(data), ]
 
 # Remove rows with missing values
 data <- data[complete.cases(data), ]
