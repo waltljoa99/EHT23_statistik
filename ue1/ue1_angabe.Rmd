@@ -31,7 +31,7 @@ get_path <- function(filename) {
 ```
 
 ```{r}
-# Closes all currently open plots
+# Display new plots in new tab
 while(dev.cur() > 1) dev.off()
 ```
 
