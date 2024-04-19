@@ -19,11 +19,17 @@ Für Menschen, die ihren Blutdruck senken wollen, ist eine häufig empfohlene Vo
 **[2P] a:** Importieren Sie den Datensatz `intersalt.csv`. Erstellen Sie zwei Regressionsmodelle für den diastolische Blutdruck (bp) in Abhängigkeit der Natriumausscheidung (na). Das erste Modell soll alle Datenpunkte verwenden. Für das zweite Modell sollen die vier Datenpunkte mit der geringsten Natriumausscheidung aus dem Datensatz entfernt werden.
 
 ```{r}
+
+
 # import intersalt data
 intersalt <- read.csv("intersalt.csv", sep = ";", dec = ",")
 
 # summary of intersalt data
 str(intersalt)
+summary(intersalt)
+
+# check for missing values
+sum(is.na(intersalt))
 
 # first model (all data points)
 model_1 <- lm(bp ~ na, data = intersalt)
@@ -37,13 +43,7 @@ intersalt_m2 <- intersalt_sorted[-c(1:4),]
 # second model (without 4 smallest na values)
 model_2 <- lm(bp ~ na, data = intersalt_m2)
 
-# head of intersalt data
-head(intersalt)
 
-# mean of intersalt$na
-mean(intersalt$na)
-
-# 
 ```
 
 Führen Sie für beide Modelle eine lineare Regressionsanalyse durch, die folgende Punkte umfasst:
@@ -71,7 +71,7 @@ ii) Interpretation der Signifikanz und Modellgüte:
 **Steigung:** Das 95\% Konfidenzintervall für die Steigung bezüglich der Natriumausscheidung liegt zwischen 0.00988 und 0.06548. Wir können also mit 95\%iger Sicherheit sagen, dass der Anstieg des diastolische Blutdruck zwischen 0.00988 und 0.06548 beträgt, wenn die Natriumausscheidung um 1 mmol/24h steigt.
 
 **Signifikanz und Modellgüte:** 
-Die Signifikanz des p-Wertes für die Steigung (p = 0.0089) deutet auf einen statistisch signifikanten Zusammenhang zwischen der Natriumausscheidung und dem diastolischen Blutdruck hin. Der p-Wert für den Intercept dieses Modells ist sogar als hochsignifikant zu werten. Ein Wert von 0.1291 für das Bestimmtheitsmaß R^2 zeigt jedoch, dass das Modell nur etwa 12.91\% der Variabilität im diastolischen Blutdruck mit der Natriumausscheidung erklären kann. Die Erkenntnis daraus ist, dass noch andere Faktor den Blutdruck beeinflussen. 
+Die Signifikanz des p-Wertes für die Steigung (p = 0.0089) deutet auf einen statistisch signifikanten Zusammenhang zwischen der Natriumausscheidung und dem diastolischen Blutdruck hin. Der p-Wert für den Intercept dieses Modells ist sogar als hochsignifikant zu werten. Ein Wert von 0.1291 für das Bestimmtheitsmaß R^2 zeigt jedoch, dass das Modell nur knapp 13\% der Variabilität im diastolischen Blutdruck mit der Natriumausscheidung erklären kann. Eine Erkenntnis daraus ist, dass noch andere Faktor den Blutdruck beeinflussen. 
 
 iii) Grafische Darstellung der Regressionsgeraden inkl. Konfidenzintervall
 
@@ -86,8 +86,6 @@ ggplot(intersalt, aes(x = na, y = bp)) +
        y = "Diastolischer Blutdruck (mmHg)")
 
 ```
-
-
 **Modell 2**
 
 ```{r}  
@@ -155,7 +153,7 @@ Die Intersalt-Studie, eine standardisierte, internationale Untersuchung mit eine
 
 
 # 2 Lineare Regressionsanalyse (kategorisch) [3P]
-Der Datensatz `infant.csv` enthält Information über die unterschiedliche Kindersterblichkeit zwischen den Kontinenten. Die Variable `infant` enthält die Kindersterblichkeit in Tode pro 1000 Geburten. Unterscheidet sich die Kindersterblichkeit zwischen den Kontinenten?s
+Der Datensatz `infant.csv` enthält Information über die unterschiedliche Kindersterblichkeit zwischen den Kontinenten. Die Variable `infant` enthält die Kindersterblichkeit in Tode pro 1000 Geburten. Unterscheidet sich die Kindersterblichkeit zwischen den Kontinenten?
 
 **[2P] a:** Führen Sie eine Regressionsanalyse mit Europa als Referenz durch, welche die folgenden Punkte umfasst:
 
@@ -166,6 +164,10 @@ i) Beurteilung der Modellgüte und Residuenanalyse
 ```{r}
 # Import the data
 data <- read.csv2("infant.csv")
+
+# summary of the data
+str(data)
+summary(data)
 
 # Convert the region variable to a factor
 data$region <- as.factor(data$region)
@@ -180,11 +182,9 @@ model <- lm(infant ~ region, data = data)
 summary(model)
 confint(model, level=0.95)
 ```
-Der p-Wert der F-Stastik liegt unter 5%&, was bedeuet, dass mindestens ein
-Koeffizient signifikant ist.
+Der p-Wert der F-Stastik liegt unter 5%, was bedeuet, dass mindestens ein Koeffizient signifikant ist.
 
-Der p-Wert der erwarteten Kindersterblichkeit für Europa "(Intercept)" liegt
-mit 31% über dem Signifikanzniveau von 5%. Dementsprechend ist 0 im
+Der p-Wert der erwarteten Kindersterblichkeit für Europa "(Intercept)" liegt mit 31% über dem Signifikanzniveau von 5%. Dementsprechend ist 0 im
 Konfidenzintervall eingeschlossen. D.h. es gibt keinen signfikanten Unterschied 
 zu Kindersterblichkeit gleich 0.
 
@@ -198,18 +198,12 @@ Die p-Werte der erwareten Differenzen in der Kindersterblichkeit zwischen den
 Der adjusted R^2 beträgt 23%. Somit können 23% der Varianz in der (relativen)
 Kindersterblichkeit durch eine Änderung in den (binären) Prädiktor-Variablen bestimmt werden.
 
+Im Folgenden werden die Residuen analysiert:
+
 ```{r}
-# Interpret the significance of the results
-
-# The p-value for each term tests the null hypothesis that the coefficient is equal to zero (no effect).
-# A low p-value (< 0.05) indicates that you can reject the null hypothesis.
-
-# Assess the quality of the model and perform a residual analysis
-#par(mfrow=c(2,2))
-#plot(model)
-
 # Convert model's data to a data frame
 model_data <- data[complete.cases(data), ]  # remove rows with missing values
+
 df <- data.frame(resid = resid(model), fitted = fitted(model),
                  region = model_data$region, infant = model_data$infant)
 
@@ -315,9 +309,6 @@ model_data <- data[complete.cases(data), ]  # remove rows with missing values
 df <- data.frame(resid = resid(model), fitted = fitted(model),
                  Weight = model_data$Weight, Days = model_data$Days)
 
-# Load ggplot2
-library(ggplot2)
-
 # Create the four diagnostic plots
 # 1. Residuals vs Fitted
 p1 <- ggplot(df, aes(fitted, resid)) +
@@ -349,8 +340,8 @@ grid.arrange(p1, p2, p3, p4, nrow = 2)
 ```
 Die Grafiken zeigen, dass die Residuen nicht normalverteilt sind. Sie zeigen ein Muster.
 D.h. das linerare Modell ist nicht sehr gut geeignet für den Datensatz.
-Zur weiteren Veranschaulichung erfolgt eine Darstellung des linearen Modells inklusive
-Konfidenz- und Vorhersage-Intervall.
+Zur weiteren Veranschaulichung erfolgt eine Darstellung des linearen Modells inklusive Konfidenz- und Vorhersage-Intervall.
+
 
 ```{r}
 # 1. Add predictions 
@@ -446,6 +437,76 @@ grid.arrange(p1, p2, p3, p4, nrow = 2)
 Die Grafiken zeigen, dass die Residuen normalverteilt sind und kein eindeutiges
 Muster erkennen lassen. Das quadratische Modell ist daher hinreichend gut geeignet zur Modellierung dieser Daten.
 
+Bei einer späteren Analyse zeigte sich, dass ein exponentiales Modell eine noch bessere Anpassung an die Daten liefert. Dieses Modell wird im Folgenden vorgestellt.
+
+```{r}
+# exponential model
+# ln(Weight-80) = ln(b0) + b1*Days
+
+# tranform weight data
+log_weight <- log(data$Weight-80)
+
+# Fit the model
+model_log <- lm(log_weight ~ Days, data = data)
+
+# Print the model equation and 95% confidence intervals
+summary(model_log)
+
+# plot the model with ggplot
+ggplot(data, aes(x=Days, y=log_weight)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  ggtitle("Linear Regression Model")
+```
+
+```{r}
+# Get the model coefficients
+# intercept
+ln_b0 = model_log$coefficients[1]
+b0 = exp(ln_b0)
+
+b1 = model_log$coefficients[2]
+
+x = data$Days
+y = data$Weight
+
+# plot the model with ggplot and the original values
+p <- ggplot(data, aes(x=x, y=y)) +
+  geom_point()
+
+p + geom_function(fun= function(x) {b0*exp(b1*x) + 80}, color = "red")
+
+# Calculate R^2 value for the transformed model 
+# and the root mean squared error (RMSE) for original values
+
+# Define your model
+model <- function(x) {b0*exp(b1*x) + 80}
+ 
+# Calculate the predicted y values
+y_pred <- model(x)
+ 
+# Calculate the residual sum of squares
+rss <- sum((y - y_pred)^2)
+ 
+# Calculate the total sum of squares
+tss <- sum((y - mean(y))^2)
+ 
+# R-squared
+r_squared <- 1 - rss/tss
+
+# root mean squared error
+rmse <- sqrt(mean((y - y_pred)^2))
+
+# residual standard error
+rse <- sqrt(sum((y - y_pred)^2)/(length(y)-2)) 
+
+# Print R-squared
+paste("R-squared: ", r_squared)
+paste("RMSE: ", rmse)
+paste("RSE: ", rse)
+
+```
+
 **[1P] b:** Welches Gewicht hat der Patient nach 30 Tagen bzw. nach 200 Tagen Diät?
 
 ```{r}
@@ -504,12 +565,6 @@ library(haven)
 # Read in .sav file
 data <- read_spss("Framingham.sav")
 
-# check for missing values
-sum(is.na(data))
-
-# show rows with missing values
-na_rows <- data[!complete.cases(data), ]
-
 # Remove rows with missing values
 data <- data[complete.cases(data), ]
 
@@ -547,7 +602,7 @@ library(car)
 vif(max_model)
 
 ```
-Die Multikollinearität ist in diesem Modell nicht signifikant, da alle Variablen einen VIF-Wert unter 5 haben. Am auffälligsten sind jedoch die Variablen "cursmoke" und "cigsperday", die möglicherweise aufgrund ihrer Korrelation einen hohen VIF-Wert aufweisen. Auch die Variablen mi_fchd und cvd 
+Die Multikollinearität ist in diesem Modell nicht signifikant, da alle Variablen einen VIF-Wert unter 5 haben. Auffällig sind jedoch die Variablen "cursmoke" und "cigsperday", die möglicherweise aufgrund ihrer Korrelation einen hohen VIF-Wert aufweisen. Auch die Variablen mi_fchd und cvd besitzen einen VIF-Wert über 4. 
 
 ```{r}
 # Import the data
@@ -609,7 +664,7 @@ totchol (Cholesterol), bmi (Body Mass Index) und diabetes1 (positive Diabetes Di
 Auffällig ist der stark positive Wert von bpmeds1 (vorhandene Einnahme von Blutdrucksenkern).
 Dieses hochsignifikatne Ergebnis ist auf den ersten Blick etwas überraschend, und bedeutet, dass die Einnahme von Blutdrucksenkern mit einem Anstieg des systolischen Blutdrucks einhergeht. Dies könnte jedoch durch die Tatsache erklärt werden, dass Personen, die Blutdrucksenker einnehmen, bereits einen hohen Blutdruck haben, der durch die Medikation kontrolliert werden soll. Es ist daher wichtig, dieses Ergebnis im Kontext der vorliegenden Daten und des medizinischen Hintergrunds zu interpretieren.
 
-Auch bemerkenswert ist der Einfluss des Geschlechts auf den systolischen Blutdruck. Der Koeffizient für sex2 ist positiv und hochsignifikant, was bedeutet, dass Frauen basierend auf den Daten in unserem Modell einen höheren systolischen Blutdruck haben als Männer.
+Auch bemerkenswert ist der Einfluss des Geschlechts auf den systolischen Blutdruck. Der Koeffizient für sex2(female) ist positiv und hochsignifikant, was bedeutet, dass Frauen basierend auf den Daten in unserem Modell einen höheren systolischen Blutdruck haben als Männer.
 
 ```{r}
 # Convert model's data to a data frame
@@ -711,5 +766,5 @@ predicted_sysbp_pred_int <- predict(model, newdata = new_data, interval = "predi
 print(predicted_sysbp_pred_int)
 ```
 Der systolische Blutdruck der Person mit dem gegebenen Profil beträgt 138.4 mmHg
-(Konfidenzintervall [137.1,139.7], Vorhersageintervall [114.0,162.9]).
+(Konfidenzintervall [137.1;139.7], Vorhersageintervall [114.0;162.9]).
 
