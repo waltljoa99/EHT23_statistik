@@ -19,10 +19,42 @@ Für Menschen, die ihren Blutdruck senken wollen, ist eine häufig empfohlene Vo
 **[2P] a:** Importieren Sie den Datensatz `intersalt.csv`. Erstellen Sie zwei Regressionsmodelle für den diastolische Blutdruck (bp) in Abhängigkeit der Natriumausscheidung (na). Das erste Modell soll alle Datenpunkte verwenden. Für das zweite Modell sollen die vier Datenpunkte mit der geringsten Natriumausscheidung aus dem Datensatz entfernt werden.
 
 ```{r}
+<<<<<<< HEAD
 
 
+=======
+get_path <- function(filename) {
+  isRStudio <- Sys.getenv("RSTUDIO") == "1"
+  if(isRStudio) {
+     return(filename)
+  }
+  else {
+    return(paste("ue1",filename,sep="/"))
+  }
+}
+```
+
+```{r}
+# Display new plots in new tab
+while(dev.cur() > 1) dev.off()
+```
+
+```{r}
+ if (!is.null(Sys.getenv("RSTUDIO"))) {
+  print("Running in RStudio")
+ }
+
+if (!is.null(Sys.getenv("VSCODE_PID"))) {
+  print("Running in Visual Studio Code")
+} else {
+  print("Unknown IDE")
+}
+```
+
+```{r}
+>>>>>>> 284a81ea3ac9964585d2fef14b50b497d2e8d2d7
 # import intersalt data
-intersalt <- read.csv("intersalt.csv", sep = ";", dec = ",")
+intersalt <- read.csv(get_path("intersalt.csv"), sep = ";", dec = ",")
 
 # summary of intersalt data
 str(intersalt)
@@ -163,7 +195,7 @@ i) Beurteilung der Modellgüte und Residuenanalyse
 
 ```{r}
 # Import the data
-data <- read.csv2("infant.csv")
+data <- read.csv2(get_path("infant.csv"))
 
 # summary of the data
 str(data)
@@ -290,7 +322,7 @@ i) Grafische Darstellung der Regressionsgeraden inkl. Konfidenz-und Vorhersagein
 ```{r}
 library(readxl)
 # import the data
-data <- read_excel("wtloss.xlsx")
+data <- read_excel(get_path("wtloss.xlsx"))
 
 # fit a linear model
 model <- lm(Weight ~ Days, data = data)
@@ -563,7 +595,7 @@ Die folgende Sektion ist nur eine experimentelle Vorarbeit und kein Teil der Ant
 library(haven)
 
 # Read in .sav file
-data <- read_spss("Framingham.sav")
+data <- read_spss(get_path("Framingham.sav"))
 
 # Remove rows with missing values
 data <- data[complete.cases(data), ]
@@ -610,7 +642,7 @@ Die Multikollinearität ist in diesem Modell nicht signifikant, da alle Variable
 library(haven)
 
 # Read in .sav file
-data <- read_spss("Framingham.sav")
+data <- read_spss(get_path("Framingham.sav"))
 
 # Convert the educ variable to a factor
 data$educ <- as.factor(data$educ)
