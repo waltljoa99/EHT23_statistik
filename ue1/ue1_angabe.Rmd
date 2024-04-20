@@ -39,20 +39,7 @@ get_path <- function(filename) {
 while(dev.cur() > 1) dev.off()
 ```
 
-```{r}
- if (!is.null(Sys.getenv("RSTUDIO"))) {
-  print("Running in RStudio")
- }
-
-if (!is.null(Sys.getenv("VSCODE_PID"))) {
-  print("Running in Visual Studio Code")
-} else {
-  print("Unknown IDE")
-}
-```
-
-```{r}
->>>>>>> 284a81ea3ac9964585d2fef14b50b497d2e8d2d7
+84a81ea3ac9964585d2fef14b50b497d2e8d2d7
 # import intersalt data
 intersalt <- read.csv(get_path("intersalt.csv"), sep = ";", dec = ",")
 
