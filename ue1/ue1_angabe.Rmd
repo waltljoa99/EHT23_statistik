@@ -19,10 +19,6 @@ Für Menschen, die ihren Blutdruck senken wollen, ist eine häufig empfohlene Vo
 **[2P] a:** Importieren Sie den Datensatz `intersalt.csv`. Erstellen Sie zwei Regressionsmodelle für den diastolische Blutdruck (bp) in Abhängigkeit der Natriumausscheidung (na). Das erste Modell soll alle Datenpunkte verwenden. Für das zweite Modell sollen die vier Datenpunkte mit der geringsten Natriumausscheidung aus dem Datensatz entfernt werden.
 
 ```{r}
-<<<<<<< HEAD
-
-
-=======
 get_path <- function(filename) {
   isRStudio <- Sys.getenv("RSTUDIO") == "1"
   if(isRStudio) {
@@ -32,6 +28,8 @@ get_path <- function(filename) {
     return(paste("ue1",filename,sep="/"))
   }
 }
+
+print(get_path("intersalt.csv"))
 ```
 
 ```{r}
@@ -39,7 +37,7 @@ get_path <- function(filename) {
 while(dev.cur() > 1) dev.off()
 ```
 
-84a81ea3ac9964585d2fef14b50b497d2e8d2d7
+```{r}
 # import intersalt data
 intersalt <- read.csv(get_path("intersalt.csv"), sep = ";", dec = ",")
 
