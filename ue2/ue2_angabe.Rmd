@@ -1,0 +1,180 @@
+---
+title: "MLE01 - Vertiefende statistische Verfahren"
+subtitle: "2. Übungsblatt SS 2024"
+author:
+- 
+- 
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  word_document: default
+---
+
+# Allgemeine Information
+Alle Aufgaben sind mit R zu lössen. Die Berechnungen sollen nachvollziehbar und dokumentiert sein. Um die vollständige Punktezahl zu erreichen, müssen alle Ergebnisse und Fragen entsprechend interpretiert bzw. beantwortet werden. Code alleine ist nicht ausreichend! Die Abgabe erfolgt über Moodle entsprechend der Abgaberichtlinien als pdf und Rmd File. Bitte inkludieren Sie namentlich alle beteiligten Gruppenmitglieder sowohl im Bericht als auch im Source Code.
+Die jeweiligen Datensätze die für diese Übung relevant sind finden Sie ebenfalls in Moodle.
+
+
+# 1 Logistische Regressionsanalyse [2P]
+Verwenden Sie den Datensatz `birthwt.xlsx`. Dieser Datensatz bezieht sich auf Risikofaktoren im Zusammenhang mit niedrigem Geburtsgewicht von Säuglingen. Eine Beschreibung der einzelnen Variablen entnehmen Sie bitte dem Excel-File. 
+
+```{r}
+library(readxl)
+birthwt <- read_excel("birthwt.xlsx")
+
+# data structure
+str(birthwt)
+summary(birthwt)
+
+```
+
+Beschreibung der Variablen: 
+
+# 1. low: low birth weight (<2500g) yes/no
+# 2. age: mother's age in years
+# 3. lwt: mother's weight in pounds at last menstrual period
+# 4. race: Skincolour of the mother (1=white, 2=black, 3=other)
+# 5. smoke: smoking status during pregnancy (1=smoker, 0=non-smoker)
+# 6. ptl: number of episodes of premature labours
+# 7. ht: history of hypertension (1=yes, 0=no)
+# 8. ui: presence of uterine irritability (1=yes, 0=no)
+# 9. ftv: number of physician visits during the first trimester
+
+```{r}
+# transform into factors and set levels
+birthwt$low[birthwt$low==0] = "neg"
+birthwt$low[birthwt$low==1] = "pos"
+birthwt$low <- as.factor(birthwt$low)
+birthwt$race <- as.factor(birthwt$race)
+birthwt$smoke <- as.factor(birthwt$smoke)
+birthwt$ht <- as.factor(birthwt$ht)
+birthwt$ui <- as.factor(birthwt$ui)
+```
+
+**[1P] a:** Erstellen Sie ein Modell, welches das Risiko für niedriges Geburtsgewicht (`low`; Gewicht <2500g ja/nein) in Abhängigkeit verschiedener Faktoren beschreibt. Wie lautet die Modellgleichung?
+
+```{r}
+# first logistic regression model
+model <- glm(low ~ age + lwt + race + smoke + ptl + ht + ui + ftv, 
+             data = birthwt, family = binomial)
+
+summary(model)
+confint(model) # 95% confidence intervals
+```
+
+Basierend auf den Koeffizienten des Modells, sieht die Modellgleichung wie folgt aus:
+
+log(Odds) = 0.48 - 0.03 * age - 0.02 * lwt + 1.27 * race2 + 0.88 * race3 + 0.94 * smoke + 0.54 * ptl + 1.86 * ht + 0.77 * ui + 0.07 * ftv
+
+**[1P] b:** Überprüfen Sie die Modellvoraussetzungen und bewerten Sie die Güte des Modells. Wie hoch ist die Wahrscheinlichkeit für eine Geburt mit einem Geburtsgewicht <2500g, bei folgenden Daten der Mutter: 38 Jahre alt, 68 kg, weiß, Nichtraucher, 2 Vorgeburten (ptl), keinen Bluthochdruck, keine Reizung der Gebärmutter, ein Arztbesuch im 1. Trimester.
+
+```{r}
+# odds of coefficients
+odds <- exp(model$coefficients)
+exp(confint(model))
+
+# data for evaluation
+test.data<- birthwt
+
+# data for prediction
+pred.data <- data.frame(age = 38, lwt = 68, race = 1, smoke = 0, ptl = 2, ht = 0, ui = 0, ftv = 1)
+  # convert kg to pounds
+  pred.data$lwt <- pred.data$lwt * 2.20462
+
+library(tidyverse)
+
+# predict probabilities
+probabilities <- model %>% predict(test.data, type = "response")
+
+# calculate logodds 
+logodds <- model %>% predict(test.data, type = "link") 
+
+# predict classes 
+predicted.classes <- ifelse(probabilities > 0.5, "pos", "neg")
+
+# Accuracy of the model
+mean(predicted.classes == test.data$low)
+
+op<-data.frame(logodds=logodds,
+               odds=exp(logodds),
+               probabilities=probabilities)
+
+# check for linearity between logodds and metric predictor values
+
+# age vs logodds
+ggplot(test.data, aes(x = age, y = logodds)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Relationship between age and logodds",
+       x = "Age",
+       y = "Log(odds)")
+
+# lwt vs logodds
+ggplot(test.data, aes(x = lwt, y = logodds)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Relationship between lwt and logodds",
+       x = "Lwt",
+       y = "Log(odds)")
+
+# ptl vs logodds
+ggplot(test.data, aes(x = ptl, y = logodds)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Relationship between ptl and logodds",
+       x = "Ptl",
+       y = "Log(odds)")
+
+# ftv vs logodds
+ggplot(test.data, aes(x = ftv, y = logodds)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Relationship between ftv and logodds",
+       x = "Ftv",
+       y = "Log(odds)")
+
+# Evaluate model quality
+
+# check for multicollinearity
+library(car)
+vif(model)
+
+#G?tekriterium
+AIC(model)
+BIC(model)
+
+#mcfadden pseudo R2
+pR2(model)
+
+```
+
+
+# 2 Logistische Regressionsanalyse [3P]
+Verwenden Sie erneut die Framingham-Herz-Studiendaten in `Framingham.sav`. Die Variable `mi_fchd` beschreibt Patienten die einen hospitalisierten Myokardinfarkt oder eine tödliche koronare Herzkrankheit erlitten haben. 
+
+**[1.5P] a:** Erstellen Sie ein Modell, welches das Risiko für `mi_fchd` in Abhängigkeit von verschiedenen Faktoren beschreibt. Vermeiden Sie nicht relevante bzw. redundante Variablen. Achten Sie auf Ausreißer und fehlende Daten (`NaN, NA's`).
+
+**[1P] b:** Überprüfen Sie die Modellvorraussetzungen und evaluieren Sie die Performance des finalen Modells hinsichtlich Genauigkeit und AUROC. Vergleichen Sie die Genauigkeit des Modells mit einem Klassifizierungsmodell, dass immer "no" vorhersagt.
+
+**[0.5P] b:** Interpretieren Sie die OR. Welche Aussagen können Sie bezüglich Risikofaktoren für eine Hospitalisierung durch Myokardinfarkt bzw. tödliche koronare Herzkrankheit treffen? Was sind die Top3 Variablen mit dem stärksten Einfluss auf die Zielvariable?
+
+
+# 3 Logistische Regressionsanalyse [2P]
+Analysieren Sie Tabelle 4 in der Publikation "**Analysis of factors associated with disease outcomes in hospitalized patients with 2019 novel coronavirus disease**". Den Artikel finden Sie als pdf-Version in Moodle, oder direkt unter https://doi.org/10.1097/CM9.0000000000000775.
+
+Beantworten Sie bitte in eigenen Worten folgende Fragen:
+
+* Was ist die Outcome Variable?
+* Welche Variablen wurden in die multivariate Analyse aufgenommen und warum?
+* Was sind die Top3 Variablen in der univariaten Analyse mit dem stärksten Einfluss auf die Zielvariable?
+* Was sind die Top3 Variablen in der multivariaten Analyse mit dem stärksten Einfluss auf die Zielvariable?
+* Welche (medizinische) Bedeutung haben die Variablen im multivariaten Modell?
+* Welche Schlussfolgerung ziehen sie für die Praxis?
+
+
+
+
+
+
+
