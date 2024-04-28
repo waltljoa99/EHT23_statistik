@@ -27,6 +27,9 @@ birthwt <- read_excel("birthwt.xlsx")
 str(birthwt)
 summary(birthwt)
 
+# check for missing or inplausible values
+sum(is.na(birthwt)+sum(birthwt$age == 0)+sum(birthwt$lwt == 0))
+
 ```
 
 Beschreibung der Variablen: 
@@ -82,6 +85,13 @@ pred.data <- data.frame(age = 38, lwt = 68, race = 1, smoke = 0, ptl = 2, ht = 0
   # convert kg to pounds
   pred.data$lwt <- pred.data$lwt * 2.20462
 
+# transform factors
+pred.data$race <- as.factor(pred.data$race)
+pred.data$smoke <- as.factor(pred.data$smoke)
+pred.data$ht <- as.factor(pred.data$ht)
+pred.data$ui <- as.factor(pred.data$ui)
+
+  
 library(tidyverse)
 
 # predict probabilities
@@ -140,12 +150,12 @@ ggplot(test.data, aes(x = ftv, y = logodds)) +
 library(car)
 vif(model)
 
-#G?tekriterium
+# G?tekriterium
 AIC(model)
 BIC(model)
 
-#mcfadden pseudo R2
-pR2(model)
+# prediction
+pred.response <- predict(model, newdata = pred.data, type = "response")
 
 ```
 
