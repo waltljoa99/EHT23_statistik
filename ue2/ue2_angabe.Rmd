@@ -11,6 +11,35 @@ output:
   word_document: default
 ---
 
+```{r}
+# The `here` package uses a heuristic to find your project's root directory
+# based on certain criteria (like the presence of a `.Rproj` file,
+# a `.git` directory, or a `.here` file).
+# Therefore, the directory returned by here() is not necessary equal
+# to the current working directory returned by getwd().
+
+# Parameter 'relative_path' should be the relative path
+# from the directory returned by here() to the parent directory
+# of the files you are working with.
+# This directory will be set as the working directory.
+set_working_directory <- function(relative_path) {
+  library(here)
+  path_to_working_directory <- file.path(here(), relative_path)
+  if(getwd() != path_to_working_directory) {
+    setwd(path_to_working_directory)
+  }
+  return(getwd())
+}
+
+# The working direcotry is only changed if the code is not run in RStudio
+isRStudio <- Sys.getenv("RSTUDIO") == "1"
+if (!isRStudio) {
+  # Change relative path accordingly to your working directory
+  print(set_working_directory("ue2"))
+}
+```
+
+
 # Allgemeine Information
 Alle Aufgaben sind mit R zu lössen. Die Berechnungen sollen nachvollziehbar und dokumentiert sein. Um die vollständige Punktezahl zu erreichen, müssen alle Ergebnisse und Fragen entsprechend interpretiert bzw. beantwortet werden. Code alleine ist nicht ausreichend! Die Abgabe erfolgt über Moodle entsprechend der Abgaberichtlinien als pdf und Rmd File. Bitte inkludieren Sie namentlich alle beteiligten Gruppenmitglieder sowohl im Bericht als auch im Source Code.
 Die jeweiligen Datensätze die für diese Übung relevant sind finden Sie ebenfalls in Moodle.
@@ -82,8 +111,8 @@ test.data<- birthwt
 
 # data for prediction
 pred.data <- data.frame(age = 38, lwt = 68, race = 1, smoke = 0, ptl = 2, ht = 0, ui = 0, ftv = 1)
-  # convert kg to pounds
-  pred.data$lwt <- pred.data$lwt * 2.20462
+# convert kg to pounds
+pred.data$lwt <- pred.data$lwt * 2.20462
 
 # transform factors
 pred.data$race <- as.factor(pred.data$race)
