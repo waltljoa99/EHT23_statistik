@@ -11,39 +11,82 @@ output:
   word_document: default
 ---
 
-```{r}
-# The `here` package uses a heuristic to find your project's root directory
-# based on certain criteria (like the presence of a `.Rproj` file,
-# a `.git` directory, or a `.here` file).
-# Therefore, the directory returned by here() is not necessary equal
-# to the current working directory returned by getwd().
+## Run this chunk ALWAYS first !
+- Arbeitsverzeichnis für VSC Nutzer korrekt setzen
+- Nötige Packages installieren und laden
+- Helfer Funktionen für alle Nutzer laden
+```{r setup, include=FALSE}
 
-# Parameter 'relative_path' should be the relative path
-# from the directory returned by here() to the parent directory
-# of the files you are working with.
-# This directory will be set as the working directory.
-set_working_directory <- function(relative_path) {
-  library(here)
-  path_to_working_directory <- file.path(here(), relative_path)
-  if(getwd() != path_to_working_directory) {
-    setwd(path_to_working_directory)
+# Set relative path to target working directory
+rel_path_to_target_dir <- "ue2"
+# Helper file name
+rel_path_from_target_dir_to_helper_file <- "helper.R"
+
+# Check if the code is run in RStudio
+checkIDEisRStudio <- function() {
+  isRStudio <- Sys.getenv("RSTUDIO") == "1"
+  if (isRStudio) {
+    return(TRUE)
+  } else {
+    return(FALSE)
   }
-  return(getwd())
 }
 
-# The working direcotry is only changed if the code is not run in RStudio
-isRStudio <- Sys.getenv("RSTUDIO") == "1"
-if (!isRStudio) {
-  # Change relative path accordingly to your working directory
-  print(set_working_directory("ue2"))
+# The working directory is only changed if the code is NOT run in RStudio
+if (!checkIDEisRStudio()) {
+  # Change relative path accordingly to your target working directory
+  abs_path_to_target_dir <- file.path(getwd(),rel_path_to_target_dir)
+  # Check if target directory exists
+  if(dir.exists(abs_path_to_target_dir)){
+    setwd(abs_path_to_target_dir)
+  }
 }
+
+# Check whether package is already installed, if not install it
+load <- function(package_name) {
+  if (!require(package_name, character.only = TRUE)) {
+    install.packages(package_name)
+    library(package_name, character.only = TRUE)
+  }
+}
+
+# Load packages
+load("pROC")
+load("caret")
+load("ResourceSelection")
+load("foreign")
+load("haven")
+load("tidyverse")
+load("car")
+load("ggplot2")
+load("stats")
+
+
+
+
+# Function to source helper file
+load_source <- function() {
+    if(!checkIDEisRStudio()){
+      if(file.exists(rel_path_from_target_dir_to_helper_file)){
+        source(rel_path_from_target_dir_to_helper_file)
+      }
+    } else {
+      helper_file <- basename(rel_path_from_target_dir_to_helper_file)
+      if(file.exists(helper_file)){
+        source(helper_file)
+      }
+  }
+}
+# Apply function to source helper file
+load_source()
+
+
 ```
 
 
 # Allgemeine Information
 Alle Aufgaben sind mit R zu lössen. Die Berechnungen sollen nachvollziehbar und dokumentiert sein. Um die vollständige Punktezahl zu erreichen, müssen alle Ergebnisse und Fragen entsprechend interpretiert bzw. beantwortet werden. Code alleine ist nicht ausreichend! Die Abgabe erfolgt über Moodle entsprechend der Abgaberichtlinien als pdf und Rmd File. Bitte inkludieren Sie namentlich alle beteiligten Gruppenmitglieder sowohl im Bericht als auch im Source Code.
 Die jeweiligen Datensätze die für diese Übung relevant sind finden Sie ebenfalls in Moodle.
-
 
 # 1 Logistische Regressionsanalyse [2P]
 Verwenden Sie den Datensatz `birthwt.xlsx`. Dieser Datensatz bezieht sich auf Risikofaktoren im Zusammenhang mit niedrigem Geburtsgewicht von Säuglingen. Eine Beschreibung der einzelnen Variablen entnehmen Sie bitte dem Excel-File. 
@@ -197,6 +240,133 @@ Verwenden Sie erneut die Framingham-Herz-Studiendaten in `Framingham.sav`. Die V
 **[1P] b:** Überprüfen Sie die Modellvorraussetzungen und evaluieren Sie die Performance des finalen Modells hinsichtlich Genauigkeit und AUROC. Vergleichen Sie die Genauigkeit des Modells mit einem Klassifizierungsmodell, dass immer "no" vorhersagt.
 
 **[0.5P] b:** Interpretieren Sie die OR. Welche Aussagen können Sie bezüglich Risikofaktoren für eine Hospitalisierung durch Myokardinfarkt bzw. tödliche koronare Herzkrankheit treffen? Was sind die Top3 Variablen mit dem stärksten Einfluss auf die Zielvariable?
+
+Das volle Modell wird erstellt und begutachtet. Keine Beobachtung mit Cook Distance übe 0.5. Keine Residuen > 3.
+```{r}
+load_source()
+
+# Read in framingham data
+data.full <- load_and_prepare_framingham("Framingham.sav")
+
+# Analysis of Full Model
+
+glm.full <- run_analysis_of_full_model(data.full)
+
+plot_cooks_distance(glm.full)
+plot_residuals(glm.full,data.full) 
+```
+
+Außreißer wurden identifiziert. Die Entfernung wirkt sich auf das reduzierte Modell gar nicht oder sogar negativ aus.
+```{r}
+load_source()
+
+# Remove Outliers
+
+data <- data.full
+glm <- glm.full
+
+
+
+# Removal of outliers have no effect on goodness of fit regarding cook distance
+
+cooks_d <- cooks.distance(glm)
+cooks.data <- data
+cooks.data$cooks_d <- cooks_d
+
+# Define the threshold for cook distance. 0.5 would be critical.
+# We are far below that.
+cooks_threshold <- 0.05
+
+# Remove rows where logit surpasses the threshold
+cooks.data <- subset(cooks.data, cooks_d <= cooks_threshold)
+
+
+
+
+# Removal of outliers decreases goodness of fit regarding logit
+# and the variables below. They were initially removed
+# due to the visual analysis of the logit plots. 
+
+logit.data <- get_logit_data(glm,data)
+
+# Define the threshold for logit
+logit_threshold <- 2
+
+# Remove rows where logit surpasses the threshold
+logit.data <- subset(logit.data, logodds <= logit_threshold)
+
+# Define the threshold
+threshold <- 500
+
+# Remove rows where totchol surpasses the threshold
+logit.data <- subset(logit.data, totchol <= threshold)
+
+# Define the threshold for sysbp
+sysbp_threshold <- 250
+
+# Remove rows where sysbp surpasses the threshold
+logit.data <- subset(logit.data, sysbp <= sysbp_threshold)
+
+```
+
+Das Modell wird durch Rückwertsverfahren reduziert. Der p Wert für die Modellgüte konnte über 0.05 angehoben werden.
+D.h. die Güte des Modells ist akzeptabel.
+```{r}
+load_source()
+
+# Repeat Analysis of Performance And Assumptions for the reduced model
+
+# Due to a strange behaviour of step() function, we have to run the analysis inside this file.
+# Possible reasons: reduction of dataframe size and calling the step() function from the helper file.
+
+glm <- glm(mi_fchd ~ sex + age + educ + cursmoke + cigpday +
+              bpmeds + totchol + sysbp + diabp + bmi + diabetes + heartrte +
+              glucose, data = data, family = binomial)
+
+glm <- step(glm, direction = "backward")
+
+summary(glm)
+
+
+print_odds_ratios(glm)
+
+print_glm_parameters(glm,data)
+
+# Numerical predictors of reduced model
+variables <- c("age", "totchol", "sysbp", "bmi")
+logit_data <- get_logit_data(glm,data)
+plot_logit(logit_data,variables)
+
+# Check for multicollinearity
+vif(glm)
+
+plot_cooks_distance(glm.full)
+plot_residuals(glm.full,data.full) 
+
+
+# The always no model
+
+# Count all rows
+total_rows <- nrow(data)
+total_rows
+
+# Count all "0" values in mi_fchd
+no_values <- sum(data$mi_fchd == "no")
+no_values
+
+# Correctly classified cases
+print(no_values/total_rows)
+```
+Die visuelle Analyse der logit Plots zeigt keine Auffälligkeiten. Residuen und Cook Distanz unauffällig.
+Keine der Prädiktoren hat einen Varianzinflationsfaktor größer als 1.5
+D.h. Multikollinearität ist nicht gegeben.
+
+Der AUROC beträgt 0.75 und die Genauigkeit 83%.
+Das Modell, das immer "Nein" prognostiziert erreicht eine Genauigkeit von 83%.
+Damit liegt es gleich auf mit dem reduzierten Modell. Dies lässt an der Sinnhaftigkeit des Modells zweifeln.
+
+Laut OR der Prädiktoren des reduzierten Modells haben Diabetes, Rauchen und weibliches Geschlecht den stärksten Einfluss
+für das Risiko einer Hospitalisierung durch Myokardinfarkt oder tödliche koronare Herzkrankheit, in der genannten Reihenfolge.
 
 
 # 3 Logistische Regressionsanalyse [2P]
