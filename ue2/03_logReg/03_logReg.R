@@ -9,7 +9,7 @@ library(pscl)
 library(generalhoslem)
 
 #Daten laden
-dat<-read.table("ue2/03_logReg/diabetes.csv", header = TRUE, sep = ",")
+dat<-read.table("diabetes.csv", header = TRUE, sep = ",")
 #Datenstruktur ansehen
 str(dat)
 
@@ -34,7 +34,7 @@ odds_m1 <- exp(m1$coefficients)
 exp(confint(m1)) #Ki
 
 # Daten f?r Vorhersagen 
-test.data_m1<- dat
+test.data<- dat
 #test.data<-data.frame(glucose=seq(0,300,10)) eigene Testdaten
 
 #Wahrscheinlichkeiten berechnen
@@ -44,7 +44,7 @@ probabilities_m1 <- m1 %>% predict(test.data, type = "response")
 logodds_m1 <- m1 %>% predict(test.data, type = "link") # f?r log(odds)
 
 #Zuordnung bei 50% cut-off
-predicted.classes <- ifelse(probabilities > 0.5, "pos", "neg")
+predicted.classes <- ifelse(probabilities_m1 > 0.5, "pos", "neg")
 
 # Modellgenauigkeit
 mean(predicted.classes == test.data$diabetes)
@@ -87,13 +87,13 @@ plot(m1, which=2, col=c("blue")) # Normal Q-Q Plot
 #cooks distance
 plot(m1, which=4, col=c("blue")) # Normals Q-Q Plot
 
-
-
 #Darstellung
-op_m1<-data.frame(logodds=logodds,
-               odds=exp(logodds),
-               probabilities=probabilities,
-               glucose=dat$glucose)
+op<-data.frame(logodds=logodds_m1,
+               odds=exp(logodds_m1),
+               probabilities=probabilities_m1,
+               glucose=dat$glucose,
+               prediction=predicted.classes)
+
 
 #Darstellung: Glukose vs logodds
 ggplot(op,aes(glucose, logodds)) +
@@ -111,23 +111,22 @@ ggplot(op,aes(logodds, probabilities)) +
   geom_smooth(method = "glm", method.args = list(family = "binomial"), se=F)
 
 #Darstellung: Glukose vs Wahrscheinlichkeit
-ggplot(op_m1,aes(glucose, probabilities)) +
+ggplot(op,aes(glucose, probabilities)) +
   geom_point(alpha = 0.2) + 
   geom_smooth(method = "glm", method.args = list(family = "binomial"), se=F) +
   labs(
     title = "Das logistische Regressionsmodel", 
     x = "Plasma Glukose Konzentration",
-    y = "Diabetes positiv Wahrscheinlichkeit"
+    y = "Diabetes Odds"
   )
 
-ggplot(op,aes(glucose,odds)) +
-  geom_point(alpha = 0.8, pch=16, col="blue") + #geom_vline(xintercept = 0) +
-  scale_y_continuous(breaks=seq(0,2,0.2),limits=c(0,2)) +
-  scale_x_continuous(breaks=seq(0,200,5),limits=c(50,150)) +
+#Darstellung: Glukose vs Odds
+ggplot(op,aes(glucose, odds)) +
+  geom_point(alpha = 0.2) + 
   labs(
     title = "Das logistische Regressionsmodel", 
     x = "Plasma Glukose Konzentration",
-    y = "Odds"
+    y = "Diabetes Odds"
   )
 
 
@@ -170,7 +169,6 @@ confint(model)
 
 #OR
 exp(coef(model))
-
 
 AIC(model)
 BIC(model)

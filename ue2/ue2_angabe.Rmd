@@ -11,11 +11,12 @@ output:
   word_document: default
 ---
 
-## Run this chunk ALWAYS first !
-- Arbeitsverzeichnis für VSC Nutzer korrekt setzen
-- Nötige Packages installieren und laden
-- Helfer Funktionen für alle Nutzer laden
+
 ```{r setup, include=FALSE}
+## Run this chunk ALWAYS first !
+# Arbeitsverzeichnis für VSC Nutzer korrekt setzen
+# Nötige Packages installieren und laden
+# Helfer Funktionen für alle Nutzer laden
 
 # Set relative path to target working directory
 rel_path_to_target_dir <- "ue2"
@@ -106,15 +107,15 @@ sum(is.na(birthwt)+sum(birthwt$age == 0)+sum(birthwt$lwt == 0))
 
 Beschreibung der Variablen: 
 
-# 1. low: low birth weight (<2500g) yes/no
-# 2. age: mother's age in years
-# 3. lwt: mother's weight in pounds at last menstrual period
-# 4. race: Skincolour of the mother (1=white, 2=black, 3=other)
-# 5. smoke: smoking status during pregnancy (1=smoker, 0=non-smoker)
-# 6. ptl: number of episodes of premature labours
-# 7. ht: history of hypertension (1=yes, 0=no)
-# 8. ui: presence of uterine irritability (1=yes, 0=no)
-# 9. ftv: number of physician visits during the first trimester
+low: low birth weight (<2500g) yes/no
+age: mother's age in years
+lwt: mother's weight in pounds at last menstrual period
+race: Skincolour of the mother (1=white, 2=black, 3=other)
+smoke: smoking status during pregnancy (1=smoker, 0=non-smoker)
+ptl: number of episodes of premature labours
+ht: history of hypertension (1=yes, 0=no)
+ui: presence of uterine irritability (1=yes, 0=no)
+ftv: number of physician visits during the first trimester
 
 ```{r}
 # transform into factors and set levels
@@ -130,17 +131,45 @@ birthwt$ui <- as.factor(birthwt$ui)
 **[1P] a:** Erstellen Sie ein Modell, welches das Risiko für niedriges Geburtsgewicht (`low`; Gewicht <2500g ja/nein) in Abhängigkeit verschiedener Faktoren beschreibt. Wie lautet die Modellgleichung?
 
 ```{r}
-# first logistic regression model
+# full logistic regression model
 model <- glm(low ~ age + lwt + race + smoke + ptl + ht + ui + ftv, 
              data = birthwt, family = binomial)
 
 summary(model)
 confint(model) # 95% confidence intervals
+
 ```
 
 Basierend auf den Koeffizienten des Modells, sieht die Modellgleichung wie folgt aus:
 
 log(Odds) = 0.48 - 0.03 * age - 0.02 * lwt + 1.27 * race2 + 0.88 * race3 + 0.94 * smoke + 0.54 * ptl + 1.86 * ht + 0.77 * ui + 0.07 * ftv
+
+```{r}
+
+library(MASS)
+# find best model with stepwise selection
+m2<-stepAIC(model,direction = "backward")
+m3<-stepAIC(model,direction = "forward")
+m4<-stepAIC(model,direction = "both")
+```
+
+Ein Vergleich der Modelle mit dem Rückwärts-, Vorwärts- und beidseitigen Auswahlverfahren zeigt, dass ein reduziertes Modell der folgenden Form, aufgrund des vergleichbar kleinsten AIC-Werts am besten geeignet wäre um das Risiko für niedriges Geburtsgewicht zu beschreiben: low ~ lwt + race + smoke + ptl + ht + ui. 
+Hierbei wurden die im ursprünglich enthaltenen Modell enthaltenen Variablen age und ftv entfernt.
+
+```{r}
+# reduced model
+model_reduced <- glm(low ~ lwt + race + smoke + ptl + ht + ui, 
+             data = birthwt, family = binomial)
+
+summary(model_reduced)
+
+# compare moadels
+anova(model, model_reduced)
+
+```
+
+Die Differenz in der Deviance zwischen den beiden Modellen beträgt -0.70079, was darauf hinweist, dass das reduzierte Modell nahezu das gleiche Erklärungspotential wie das volle Modell hat.
+Das reduzierte Modell besitz jedoch einen geringeren AIC-Wert (217.99) im Vergleich zum vollen Modell (221.28), was euf eine bessere Balance zwischen Modellkomplexität und Passgenauigkeit aufweist.
 
 **[1P] b:** Überprüfen Sie die Modellvoraussetzungen und bewerten Sie die Güte des Modells. Wie hoch ist die Wahrscheinlichkeit für eine Geburt mit einem Geburtsgewicht <2500g, bei folgenden Daten der Mutter: 38 Jahre alt, 68 kg, weiß, Nichtraucher, 2 Vorgeburten (ptl), keinen Bluthochdruck, keine Reizung der Gebärmutter, ein Arztbesuch im 1. Trimester.
 
@@ -153,7 +182,14 @@ exp(confint(model))
 test.data<- birthwt
 
 # data for prediction
-pred.data <- data.frame(age = 38, lwt = 68, race = 1, smoke = 0, ptl = 2, ht = 0, ui = 0, ftv = 1)
+pred.data <- data.frame(age = 38,
+                        lwt = 68, 
+                        race = 1, 
+                        smoke = 0, 
+                        ptl = 2, 
+                        ht = 0, 
+                        ui = 0, 
+                        ftv = 1)
 # convert kg to pounds
 pred.data$lwt <- pred.data$lwt * 2.20462
 
@@ -163,7 +199,6 @@ pred.data$smoke <- as.factor(pred.data$smoke)
 pred.data$ht <- as.factor(pred.data$ht)
 pred.data$ui <- as.factor(pred.data$ui)
 
-  
 library(tidyverse)
 
 # predict probabilities
@@ -178,45 +213,54 @@ predicted.classes <- ifelse(probabilities > 0.5, "pos", "neg")
 # Accuracy of the model
 mean(predicted.classes == test.data$low)
 
-op<-data.frame(logodds=logodds,
+op<-data.frame(test.data,
+               logodds=logodds,
                odds=exp(logodds),
-               probabilities=probabilities)
+               probabilities=probabilities,
+               predicted.classes=predicted.classes)
+               
 
 # check for linearity between logodds and metric predictor values
 
 # age vs logodds
-ggplot(test.data, aes(x = age, y = logodds)) +
+ggplot(op, aes(x = age, y = logodds)) +
   geom_point() +
-  geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "loess", se = T) +
   labs(title = "Relationship between age and logodds",
        x = "Age",
        y = "Log(odds)")
 
 # lwt vs logodds
-ggplot(test.data, aes(x = lwt, y = logodds)) +
+ggplot(op, aes(x = lwt, y = logodds)) +
   geom_point() +
-  geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "loess", se = T) +
   labs(title = "Relationship between lwt and logodds",
        x = "Lwt",
        y = "Log(odds)")
 
 # ptl vs logodds
-ggplot(test.data, aes(x = ptl, y = logodds)) +
+ggplot(op, aes(x = ptl, y = logodds)) +
   geom_point() +
-  geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "loess", se = T) +
   labs(title = "Relationship between ptl and logodds",
        x = "Ptl",
        y = "Log(odds)")
 
 # ftv vs logodds
-ggplot(test.data, aes(x = ftv, y = logodds)) +
+ggplot(op, aes(x = ftv, y = logodds)) +
   geom_point() +
-  geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "loess", se = T) +
   labs(title = "Relationship between ftv and logodds",
        x = "Ftv",
        y = "Log(odds)")
 
 # Evaluate model quality
+
+#normalverteilung der residuen
+plot(model, which=2, col=c("blue")) # Normal Q-Q Plot
+
+#influential values: cook's distance
+plot(model, which = 4, id.n = 3)
 
 # check for multicollinearity
 library(car)
@@ -226,11 +270,35 @@ vif(model)
 AIC(model)
 BIC(model)
 
-# prediction
-pred.response <- predict(model, newdata = pred.data, type = "response")
+library(pscl)
+#mcfadden R2
+pR2(model)
+
+#ROC curve
+library(ROCit)
+ROCit_obj <- rocit(score=probabilities,class=birthwt$low)
+plot(ROCit_obj)
 
 ```
 
+Beurteilung der Modellgüte: Das Modell hat eine Genauigkeit von 0.75, was bedeutet, dass 75% der Vorhersagen korrekt sind. Die Residuen sind normalverteilt und es gibt keine starken Ausreißer. Das Modell hat einen McFadden Pseudo-R2 Wert von 0.14, was darauf hindeutet, dass das Modell nur etwa 14% der Varianz erklärt. Der AIC-Wert beträgt 221 und der BIC-Wert knapp 254. Die VIF-Werte sind alle unter 1.6, was keine erhöhte Multikollinearität nahelegt.
+
+
+
+```{r}
+# probability prediction for birth weight < 2500g
+pred.response <- predict(model, newdata = pred.data, type = "response")
+
+# log odds prediction for birth weight < 2500g
+pred.logodds <- predict(model, newdata = pred.data, type = "link")
+
+print(paste("Probability of birth weight < 2500g:", pred.response))
+
+
+
+```
+
+Interpretation der Ergebnisse: 
 
 # 2 Logistische Regressionsanalyse [3P]
 Verwenden Sie erneut die Framingham-Herz-Studiendaten in `Framingham.sav`. Die Variable `mi_fchd` beschreibt Patienten die einen hospitalisierten Myokardinfarkt oder eine tödliche koronare Herzkrankheit erlitten haben. 
@@ -311,6 +379,7 @@ logit.data <- subset(logit.data, sysbp <= sysbp_threshold)
 
 Das Modell wird durch Rückwertsverfahren reduziert. Der p Wert für die Modellgüte konnte über 0.05 angehoben werden.
 D.h. die Güte des Modells ist akzeptabel.
+
 ```{r}
 load_source()
 
@@ -375,15 +444,33 @@ Analysieren Sie Tabelle 4 in der Publikation "**Analysis of factors associated w
 Beantworten Sie bitte in eigenen Worten folgende Fragen:
 
 * Was ist die Outcome Variable?
+
+Die in der Studie untersuchte Outcome Variable war das Fortschreiten der Kankheit zu einem schwerwiegenderend Zustand. Die Forscher haben die Patienten in zwei Gruppen eingeteilt: Eine Gruppe mit Fällen die sich erholten oder stabil blieben, und eine Gruppe mit Fällen die sich nicht im Zustand verschlechterten. Bezeichnet wurden diese Gruppen mit "improvement/stabilization" und "progression".
+
 * Welche Variablen wurden in die multivariate Analyse aufgenommen und warum?
-* Was sind die Top3 Variablen in der univariaten Analyse mit dem stärksten Einfluss auf die Zielvariable?
+
+In die multivariate Analyse wurden jene Variablen aufgenommen, die in der univariaten Analyse einen signifikanten Einfluss auf die Zielvariable hatten. Die Forscher haben die Variablen mit einem p-Wert von < 0.05 in die multivariate Analyse aufgenommen. Konkret waren das die folgende Variablen: Alter, Rauchverhalten, Maxtemperatur bei Aufnahme, Atemstillstand, Schwere Erkrankung anderer Art sowie die Laborparameter Albumin, Creatinin, Procalcitonin, C-reactive Proteine 
+
+* Was sind die Top 3 Variablen in der univariaten Analyse mit dem stärksten Einfluss auf die Zielvariable?
+
+Die Top 3 Variablen in der univariaten Analyse mit dem stärksten Einfluss auf die Zielvariable waren: Albunin mit einem OR von 12.5 [2.4;65.2], Rauchverhalten mit einem OR von 12.2 [0.5;7.2] und Alter mit einem OR von 10.6 [2.1;53;4].
+
 * Was sind die Top3 Variablen in der multivariaten Analyse mit dem stärksten Einfluss auf die Zielvariable?
+
+Die Top 3 Variablen in der multivariaten Analyse mit dem stärksten Einfluss auf die Zielvariable waren: Rauchverhalten mit einem OR von 14.28 [1.5;25], der Biomarker C-reactive Proteine mit einem OR von 10.53 [1.3;34.7] und die Maximaltemperatur bei Aufnahme mit einem OR von 9 [1;78.2].
+
 * Welche (medizinische) Bedeutung haben die Variablen im multivariaten Modell?
+
+Die Variablen im multivariaten Modell haben eine ernstzunehmende medizinische Bedeutung, da sie einen signifikanten Einfluss auf das Fortschreiten der Krankheit haben. Die Ergebnisse der Studie zeigen, dass Rauchverhalten, das Vorkommen von C-reactive Proteinen und die Maximaltemperatur bei Aufnahme die aussagekräftigsten Prädiktoren für das Fortschreiten der Krankheit sind. 
+
+Sie können dazu dienen, jene Patient:innen zu identifizieren, die ein höheres Risiko für schwerwiegende COVID-19-Verläufe haben: Ältere Patient:innen, Raucher:innen, Patient:innen mit erhöhten C-reactive Proteinen und erhöhter Maximaltemperatur bei Aufnahme.
+
 * Welche Schlussfolgerung ziehen sie für die Praxis?
 
-
-
-
+*Höhere Körpertemperatur:* Patienten mit hohem Fieber, langen Fieberperioden und schnellem Fieberverlauf sollten engmaschig überwacht werden, da ein hohes Fieber mit einer Verschlechterung der Erkrankung verbunden ist.
+*Respiratorische Anzeichen:* Atemfrequenz und das Auftreten von Atemversagen in der Vergangenheit sind wichtige Indikatoren für das Risiko einer schweren Erkrankung.
+*C-reaktives Protein und Albumin:* Ein erhöhter Spiegel von c-reaktiven Proteinen und ein niedriger Albuminspiegel sind mit einem schlechteren Verlauf von COVID-19 assoziiert. Ersterer ist ein wichtiger Indikator für Entzündungen und Albumin zeigt den Ernährungszustand des Körpers an. Diese beiden Parameter sollten während der Behandlung genau überwacht werden, da Veränderungen in diesen Werten die Krankheitsprogression widerspiegeln können.
+*Frühe Diagnose und Monitoring:* Eine frühzeitige Diagnose und eine dynamische Überwachung von Risikofaktoren sind für eine effektive Behandlung entscheidend. Kliniker sollten die genannten Indikatoren einer Krankheitverschlechterung kennen und bei Hochrisikopatienten frühzeitig intensivierte Behandlungsmaßnahmen in Erwägung ziehen.
 
 
 
