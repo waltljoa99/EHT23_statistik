@@ -435,7 +435,7 @@ Das Modell, das immer "Nein" prognostiziert erreicht eine Genauigkeit von 83%.
 Damit liegt es gleich auf mit dem reduzierten Modell. Dies lässt an der Sinnhaftigkeit des Modells zweifeln.
 
 Laut OR der Prädiktoren des reduzierten Modells haben Diabetes, Rauchen und weibliches Geschlecht den stärksten Einfluss
-für das Risiko einer Hospitalisierung durch Myokardinfarkt oder tödliche koronare Herzkrankheit, in der genannten Reihenfolge.
+für das Risiko einer Hospitalisierung durch Myokardinfarkt oder tödliche koronare Herzkrankheit.
 
 
 # 3 Logistische Regressionsanalyse [2P]
