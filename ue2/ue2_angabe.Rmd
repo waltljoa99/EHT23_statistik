@@ -45,10 +45,12 @@ if (!checkIDEisRStudio()) {
 
 # Check whether package is already installed, if not install it
 load <- function(package_name) {
-  if (!require(package_name, character.only = TRUE)) {
+  if (!(package_name %in% installed.packages())) {
+    # Set the CRAN mirror
+    options(repos = c(CRAN = "https://cran.wu.ac.at/"))
     install.packages(package_name)
-    library(package_name, character.only = TRUE)
   }
+  library(package_name, character.only = TRUE)
 }
 
 # Load packages
@@ -61,6 +63,7 @@ load("tidyverse")
 load("car")
 load("ggplot2")
 load("stats")
+load("ROCit")
 
 
 
