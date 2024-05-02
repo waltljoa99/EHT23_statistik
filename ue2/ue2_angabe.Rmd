@@ -431,7 +431,7 @@ Keine der Prädiktoren hat einen Varianzinflationsfaktor größer als 1.5
 D.h. Multikollinearität ist nicht gegeben.
 
 Der AUROC beträgt 0.75 und die Genauigkeit 83%.
-Das Modell, das immer "Nein" prognostiziert erreicht eine Genauigkeit von 83%.
+Das Modell, das immer "Nein" prognostiziert, erreicht eine Genauigkeit von 83%.
 Damit liegt es gleich auf mit dem reduzierten Modell. Dies lässt an der Sinnhaftigkeit des Modells zweifeln.
 
 Laut OR der Prädiktoren des reduzierten Modells haben Diabetes, Rauchen und weibliches Geschlecht den stärksten Einfluss
