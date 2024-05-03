@@ -26,6 +26,7 @@ B      | 10, 12, 11, 14, 8, 6
 C      | 8, 3, 2, 5
 
 ```{r}
+
 # ANOVA händische durchführung
 mean_a = mean(c(3, 6, 7, 4))
 mean_b = mean(c(10, 12, 11, 14, 8, 6))
