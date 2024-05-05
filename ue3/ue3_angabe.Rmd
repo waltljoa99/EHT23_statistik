@@ -41,28 +41,31 @@ boxplot(gains, col = c("red", "green", "blue"),
 
 # Hypothesen
 # H0: mu_a = mu_b = mu_c
-# H1: mindestens ein mu_i ist ungleich
+# H1: mu_i != mu_j (für mindestens ein Paar i,j)
 
 # Berechnung der Mittelwerte
 mean_total = mean(unlist(gains))
 
 # Berechnung der Quadratsummen
-qs_between2 <- 0
+qs_between <- 0
 for (group in gains) {
   group_mean <- mean(group)
   n <- length(group)
-  qs_between2 <- qs_between2 + n * (group_mean - mean_total)^2
+  qs_between <- qs_between + n * (group_mean - mean_total)^2
 }
 
-qs_within2 <- 0
+qs_within <- 0
 for (group in gains) {
   group_mean <- mean(group)
   for (value in group) {
-    qs_within2 <- qs_within2 + (value - group_mean)^2
+    qs_within <- qs_within + (value - group_mean)^2
   }
 }
 
 qs_total <- sum((unlist(gains) - mean_total)^2)
+
+# Prüfung der Quadratsummen
+round(qs_total, 2)==round(qs_between + qs_within, 2)
 
 # Überprüfen der Vorraussetzungen
 
@@ -79,17 +82,17 @@ df_between <- length(gains) - 1
 df_within <- length(unlist(gains)) - length(gains)
 df_total <- length(unlist(gains)) - 1
 
-# Berechnung der Varianzen (MS)
+# Berechnung der Varianzen (Mittlere Quadratsummen)
 ms_total <- qs_total / df_total
-ms_between <- qs_between2 / df_between
-ms_within <- qs_within2 / df_within
+ms_between <- qs_between / df_between
+ms_within <- qs_within / df_within
 
 # Berechnung des F-Wertes
 f_value <- ms_between / ms_within
 
 # kritischer F-Wert aus Tabelle
 alpha <- 0.05
-f_critical <- qf(1 - alpha, df_between, df_within)
+f_critical <- qf(1 - alpha, df_between, df_within,lower.tail = F)
 
 # Ergebnis
 if (f_value > f_critical) {
@@ -98,6 +101,9 @@ if (f_value > f_critical) {
   print("H0 wird nicht verworfen")
 }
 
+# p-Wert
+p_value <- pf(f_value, df_between, df_within, lower.tail = F)
+
 # Überprüfung mit R
 diet <- factor(rep(names(gains), times = sapply(gains, length)))
 all_gains <- unlist(gains)
@@ -105,9 +111,12 @@ all_gains <- unlist(gains)
 aov_result <- aov(all_gains ~ diet)
 summary(aov_result)
 
+# Effektgröße
+eta_squared <- qs_between / qs_total
+
 ```
 
-Interpretation: Es gibt einen signifikanten Unterschied zwischen den Diäten (p < 0.05). Der F-Wert beträgt 7.74 und der kritische F-Wert 3.98. Die Wahl der Diät hat somit einen signifikanten Einfluss auf die Gewichtszunahme. Der Unterschied in den Mittelwerten der Diäten ist mit einem Signifikanzniveau von 0.05 signifikant.
+Interpretation: Es gibt einen signifikanten Einfluss des Faktors Diät, F(2,11) = 7.74; p < 0.05. Als Effektgröße wurde ein Eta-Quadrat von 0.58 berechnet. Das Eta-Quadrat schätzt den Anteil der Varianz, der durch den eine Variable erklärt wird. Jedoch ist der Literatur zu entnehmen, dass der Einfluss in der Varianz durch diese Maßzahl meist überschätzt wird.
 
 # 2 Einfaktorielle ANOVA [2P]
 Analysieren Sie die Daten zu niedrigem Geburtsgewicht von Neugeborenen in `birthwt_aov.xlsx`. Untersuchen Sie ob die ethnische Zugehörigkeit der Mutter (Variable `ethnic`, wobei `1 = "white"`, `2 = "black"`, `3 = "other"` ) einen Einfluss auf das Geburtsgewicht von Neugeborenen hat (Variable `bwt`). Beachten Sie dabei folgende Punkte:
@@ -125,6 +134,7 @@ birthwt <- read_excel("UE3 Daten/birthwt_aov.xlsx")
 # Überblick über die Daten
 str(birthwt)
 summary(birthwt)
+
 
 
 ```
