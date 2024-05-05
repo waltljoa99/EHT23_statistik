@@ -26,14 +26,88 @@ B      | 10, 12, 11, 14, 8, 6
 C      | 8, 3, 2, 5
 
 ```{r}
-
 # ANOVA händische durchführung
-mean_a = mean(c(3, 6, 7, 4))
-mean_b = mean(c(10, 12, 11, 14, 8, 6))
-mean_c = mean(c(8, 3, 2, 5))
+gains <- list(
+  A = c(3, 6, 7, 4),
+  B = c(10, 12, 11, 14, 8, 6),
+  C = c(8, 3, 2, 5))
 
+# Überblick über die Daten / Farben nach Diet
+str(gains)
+boxplot(gains, col = c("red", "green", "blue"), 
+        ylab = "Gewichtszunahmen",
+        xlab = "Diät",
+        main = "Gewichtszunahmen nach Diät")
+
+# Hypothesen
+# H0: mu_a = mu_b = mu_c
+# H1: mindestens ein mu_i ist ungleich
+
+# Berechnung der Mittelwerte
+mean_total = mean(unlist(gains))
+
+# Berechnung der Quadratsummen
+qs_between2 <- 0
+for (group in gains) {
+  group_mean <- mean(group)
+  n <- length(group)
+  qs_between2 <- qs_between2 + n * (group_mean - mean_total)^2
+}
+
+qs_within2 <- 0
+for (group in gains) {
+  group_mean <- mean(group)
+  for (value in group) {
+    qs_within2 <- qs_within2 + (value - group_mean)^2
+  }
+}
+
+qs_total <- sum((unlist(gains) - mean_total)^2)
+
+# Überprüfen der Vorraussetzungen
+
+# Normalverteilung
+for (group in gains) {
+  print(shapiro.test(group))
+}
+
+# Varianzhomogenität (Barlet-Test)
+bartlett.test(gains)
+
+# Freiheitsgrade
+df_between <- length(gains) - 1
+df_within <- length(unlist(gains)) - length(gains)
+df_total <- length(unlist(gains)) - 1
+
+# Berechnung der Varianzen (MS)
+ms_total <- qs_total / df_total
+ms_between <- qs_between2 / df_between
+ms_within <- qs_within2 / df_within
+
+# Berechnung des F-Wertes
+f_value <- ms_between / ms_within
+
+# kritischer F-Wert aus Tabelle
+alpha <- 0.05
+f_critical <- qf(1 - alpha, df_between, df_within)
+
+# Ergebnis
+if (f_value > f_critical) {
+  print("H0 wird verworfen")
+} else {
+  print("H0 wird nicht verworfen")
+}
+
+# Überprüfung mit R
+diet <- factor(rep(names(gains), times = sapply(gains, length)))
+all_gains <- unlist(gains)
+
+aov_result <- aov(all_gains ~ diet)
+summary(aov_result)
 
 ```
+
+Interpretation: Es gibt einen signifikanten Unterschied zwischen den Diäten (p < 0.05). Der F-Wert beträgt 7.74 und der kritische F-Wert 3.98. Die Wahl der Diät hat somit einen signifikanten Einfluss auf die Gewichtszunahme. Der Unterschied in den Mittelwerten der Diäten ist mit einem Signifikanzniveau von 0.05 signifikant.
 
 # 2 Einfaktorielle ANOVA [2P]
 Analysieren Sie die Daten zu niedrigem Geburtsgewicht von Neugeborenen in `birthwt_aov.xlsx`. Untersuchen Sie ob die ethnische Zugehörigkeit der Mutter (Variable `ethnic`, wobei `1 = "white"`, `2 = "black"`, `3 = "other"` ) einen Einfluss auf das Geburtsgewicht von Neugeborenen hat (Variable `bwt`). Beachten Sie dabei folgende Punkte:
@@ -42,6 +116,19 @@ i) Überprüfen Sie die Vorraussetzungen.
 i) Verwenden Sie eine geeignete grafische Darstellung der Daten / Ergebnisse.
 i) Gibt es signifikante Unterschiede zwischen den Gruppen, wenn ja zwischen welchen Gruppen?
 i) Achten Sie auf eine "statistisch korrekte" Formulierung des Ergebnisses.
+
+```{r}
+# Daten einlesen
+library(readxl)
+birthwt <- read_excel("UE3 Daten/birthwt_aov.xlsx")
+
+# Überblick über die Daten
+str(birthwt)
+summary(birthwt)
+
+
+```
+
 
 # 3 Einfaktorielle ANOVA [2P]
 
