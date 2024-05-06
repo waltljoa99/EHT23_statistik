@@ -133,12 +133,97 @@ birthwt <- read_excel("UE3 Daten/birthwt_aov.xlsx")
 
 # Überblick über die Daten
 str(birthwt)
-summary(birthwt)
+summary(birthwt$bwt)
 
+# Hypothesen
+# H0: mu_white = mu_black = mu_other
+# H1: mu_i != mu_j (für mindestens ein Paar i,j)
+
+# Überprüfen der Vorraussetzungen
+
+# Normalverteilung (für jede Gruppe)
+par(mfrow = c(1,3))
+hist(birthwt$bwt[birthwt$ethnic == 1], main = "ehnic 1 (white)")
+hist(birthwt$bwt[birthwt$ethnic == 2], main = "ehnic 2 (black)")
+hist(birthwt$bwt[birthwt$ethnic == 3], main = "ehnic 3 (other)")
+
+# Shapiro-Wilk-Test
+for (group in 1:3) {
+  print(shapiro.test(birthwt$bwt[birthwt$ethnic == group]))
+}
+```
+Ein visuelle Überprüfung der Normalverteilung zeigt, dass diese für alle Gruppen gegeben ist. Der Shapiro-Wilk-Test bestätigt diese Annahme, weshalb die Normalverteilung als gegeben angenommen werden kann
+
+```{r}
+# Varianzhomogenität
+
+# Levene-Test
+library(car)
+leveneTest(bwt ~ as.factor(ethnic), data = birthwt)
+
+# Bartlett-Test
+bartlett.test(birthwt$bwt ~ as.factor(birthwt$ethnic))
+
+```
+Sowohl der Levene- als auch der Bartlett-Test zeigen, dass die Varianzhomogenität gegeben ist. 
+
+Die Vorraussetzungen für die ANOVA sind somit gegeben und sie kann ohne Bedenken durchgeführt werden.
+
+
+```{r}
+# ANOVA
+aov_result <- aov(bwt ~ as.factor(ethnic), data = birthwt)
+summary(aov_result)
+
+# Darstellung der Ergebnisse
+library(ggplot2)
+ggplot(birthwt, aes(x = as.factor(ethnic), y = bwt)) +
+  geom_boxplot() +
+  labs(title = "Geburtsgewicht in Abhängigkeit der ethnischen Zugehörigkeit",
+       x = "ethnische Zugehörigkeit",
+       y = "Geburtsgewicht")
+
+```
+F_value = 4.91, p = 0.008 (p < 0.05) -> H0 wird verworfen
+
+Die ethnische Zugehörigkeit hat einen signifikanten Einfluss auf das Geburtsgewicht von Neugeborenen, F(2,186)=4.91, p = 0.008.
+
+Um herauszufinden zwischen welchen Gruppen die Unterschiede bestehen, wird nun ein Post-Hoc-Test durchgeführt. Als geeigneter Test wird der Tukey HSD-Test verwendet.
+
+```{r}
+# Post-Hoc-Test
+pht <- TukeyHSD(aov_result)
+print(pht)
+
+# Darstellung der Ergebnisse
+library(ggpubr)
+
+stat.test <- tibble::tribble(
+  ~group1, ~group2,   ~p.adj,
+  "White",     "Black", round(pht$`as.factor(ethnic)`[1,4],6),
+  "White",     "Other", round(pht$`as.factor(ethnic)`[2,4],6),
+  "Black",     "Other", round(pht$`as.factor(ethnic)`[3,4],6))
+
+# Boxplot erstellen
+ggboxplot(birthwt, x = "ethnic", y = "bwt", fill = "ethnic" 
+          add = "jitter", 
+          color = "ethnic", 
+          palette = "jco") +
+  stat_pvalue_manual(stat.test,
+                     y.position = 75, step.increase = 0.2,
+                     label = "p.adj")
+
+# Boxplot erstellen
+ggboxplot(birthwt, x = "ethnic", y = "bwt",
+          add = "jitter",
+          color = "ethnic", 
+          palette = "jco") +
+  stat_pvalue_manual(stat.test,
+                     y.position = 75, step.increase = 0.2,
+                     label = "p.adj")
 
 
 ```
-
 
 # 3 Einfaktorielle ANOVA [2P]
 
