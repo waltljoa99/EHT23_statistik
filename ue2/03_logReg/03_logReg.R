@@ -73,7 +73,7 @@ caret::specificity(data=factor(predicted.classes), reference = factor(dat$diabet
 
 #Creating confusion matrix with caret package
 
-cm <- caret::confusionMatrix(data=factor(predicted.classes), reference = factor(dat$diabetes))
+cm <- caret::confusionMatrix(data=factor(predicted.classes), reference = factor(dat$diabetes), positive ='pos')
 cm
 
 

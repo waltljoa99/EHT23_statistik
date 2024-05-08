@@ -74,6 +74,8 @@ for (group in gains) {
   print(shapiro.test(group))
 }
 
+# 
+
 # Varianzhomogenität (Barlet-Test)
 bartlett.test(gains)
 
@@ -131,6 +133,9 @@ i) Achten Sie auf eine "statistisch korrekte" Formulierung des Ergebnisses.
 library(readxl)
 birthwt <- read_excel("UE3 Daten/birthwt_aov.xlsx")
 
+# Faktor für ethnische Zugehörigkeit
+birthwt$ethnic <- factor(birthwt$ethnic, levels = c(1,2,3), labels = c("white", "black", "other"))
+
 # Überblick über die Daten
 str(birthwt)
 summary(birthwt$bwt)
@@ -143,19 +148,21 @@ summary(birthwt$bwt)
 
 # Normalverteilung (für jede Gruppe)
 par(mfrow = c(1,3))
-hist(birthwt$bwt[birthwt$ethnic == 1], main = "ehnic 1 (white)")
-hist(birthwt$bwt[birthwt$ethnic == 2], main = "ehnic 2 (black)")
-hist(birthwt$bwt[birthwt$ethnic == 3], main = "ehnic 3 (other)")
+hist(birthwt$bwt[birthwt$ethnic == 'white'], main = "ehnic 1 (white)")
+hist(birthwt$bwt[birthwt$ethnic == 'black'], main = "ehnic 2 (black)")
+hist(birthwt$bwt[birthwt$ethnic == 'other'], main = "ehnic 3 (other)")
 
+ethics <- unique(birthwt$ethnic)
 # Shapiro-Wilk-Test
-for (group in 1:3) {
-  print(shapiro.test(birthwt$bwt[birthwt$ethnic == group]))
+for (ethic in ethics) {
+  print(shapiro.test(birthwt$bwt[birthwt$ethnic == ethic]))
 }
+
 ```
 Ein visuelle Überprüfung der Normalverteilung zeigt, dass diese für alle Gruppen gegeben ist. Der Shapiro-Wilk-Test bestätigt diese Annahme, weshalb die Normalverteilung als gegeben angenommen werden kann
 
 ```{r}
-# Varianzhomogenität
+# Varianzhomogenität (Heteroskedastizität)
 
 # Levene-Test
 library(car)
@@ -169,10 +176,9 @@ Sowohl der Levene- als auch der Bartlett-Test zeigen, dass die Varianzhomogenit�
 
 Die Vorraussetzungen für die ANOVA sind somit gegeben und sie kann ohne Bedenken durchgeführt werden.
 
-
 ```{r}
 # ANOVA
-aov_result <- aov(bwt ~ as.factor(ethnic), data = birthwt)
+aov_result <- aov(bwt ~ ethnic, data = birthwt)
 summary(aov_result)
 
 # Darstellung der Ergebnisse
@@ -200,29 +206,17 @@ library(ggpubr)
 
 stat.test <- tibble::tribble(
   ~group1, ~group2,   ~p.adj,
-  "White",     "Black", round(pht$`as.factor(ethnic)`[1,4],6),
-  "White",     "Other", round(pht$`as.factor(ethnic)`[2,4],6),
-  "Black",     "Other", round(pht$`as.factor(ethnic)`[3,4],6))
-
-# Boxplot erstellen
-ggboxplot(birthwt, x = "ethnic", y = "bwt", fill = "ethnic" 
-          add = "jitter", 
-          color = "ethnic", 
-          palette = "jco") +
-  stat_pvalue_manual(stat.test,
-                     y.position = 75, step.increase = 0.2,
-                     label = "p.adj")
+  "white",     "black", round(pht$ethnic[1,4],6),
+  "white",     "other", round(pht$ethnic[2,4],6),
+  "black",     "other", round(pht$ethnic[3,4],6))
 
 # Boxplot erstellen
 ggboxplot(birthwt, x = "ethnic", y = "bwt",
-          add = "jitter",
           color = "ethnic", 
           palette = "jco") +
   stat_pvalue_manual(stat.test,
-                     y.position = 75, step.increase = 0.2,
+                     y.position = 5500, step.increase = 0.2,
                      label = "p.adj")
-
-
 ```
 
 # 3 Einfaktorielle ANOVA [2P]
@@ -238,8 +232,140 @@ i) Achten Sie auf eine "statistisch korrekte" Formulierung des Ergebnisses.
 Sie führen eine Studie bezüglich des Einflusses unterschiedlicher Diäten und Aktivitätslevels auf den Erfolg bei der Gewichtsabnahme durch. Jedem Probanden wird eine Diät und ein Aktivitätslevel zugewiesen und die Differenz zum Ausgangsgewicht nach 2 Monaten gemessen (in kg). Die Daten der Studie sind in `weightloss.sav` zusammengefasst. Analysieren Sie ob die beiden Faktoren einen Einfluss auf das Gewicht haben.
 
 i) Überprüfen Sie die Vorraussetzungen.
+
+```{r}
+# Laden der Daten
+library(foreign)
+weightloss <- read.spss("UE3 Daten/weightloss.sav", to.data.frame = TRUE)
+
+str(weightloss)
+summary(weightloss)
+
+# Überprüfen der Vorraussetzungen
+
+# -- für Diet-Gruppen
+unique_diets <- unique(weightloss$diet)
+
+# Normalverteilung 
+par(mfrow = c(1, 3))
+for(diet in unique_diets) {
+  # Daten für die spezifische Diät
+  diet_data <- weightloss$wloss[weightloss$diet == diet]
+
+  # Histogramm erstellen
+  hist(diet_data, probability = TRUE,
+       main = paste("Histogramm für Diät", diet),
+       xlab = "Gewichtsabnahme (kg)",
+       col = "gray", border = "black",
+       ylim = c(0, 0.15))
+
+  # Normalverteilungskurve hinzufügen
+  curve(dnorm(x, mean = mean(diet_data), sd = sd(diet_data)), add = TRUE, col = "red")
+}
+
+# Shapiro-Wilk-Test
+for (diet in unique_diets) {
+  print(shapiro.test(weightloss$wloss[weightloss$diet == diet]))
+}
+```
+```{r}
+# -- für Activity-Gruppen
+unique_activities <- unique(weightloss$exercise)
+
+# Normalverteilung
+par(mfrow = c(1, 3))
+for(activity in unique_activities) {
+  # Daten für die spezifische Aktivität
+  activity_data <- weightloss$wloss[weightloss$exercise == activity]
+
+  # Histogramm erstellen
+  hist(activity_data, probability = TRUE,
+       main = paste("Histogramm f.", activity),
+       xlab = "Gewichtsabnahme (kg)",
+       col = "gray", border = "black",
+       ylim = c(0, 0.15))
+
+  # Normalverteilungskurve hinzufügen
+  curve(dnorm(x, mean = mean(activity_data), sd = sd(activity_data)), add = TRUE, col = "red")
+}
+
+# Shapiro-Wilk-Test
+for (activity in unique_activities) {
+  print(shapiro.test(weightloss$wloss[weightloss$exercise == activity]))
+}
+```
+```{r}
+# Varianzhomogenität (Heteroskedastizität)
+
+# Levene-Test
+leveneTest(wloss ~ diet, data = weightloss)
+leveneTest(wloss ~ exercise, data = weightloss)
+leveneTest(wloss ~ diet * activity, data = weightloss)
+
+# Bartlett-Test
+bartlett.test(wloss ~ diet, data = weightloss)
+bartlett.test(wloss ~ exercise, data = weightloss)
+
+```
+
+
 i) Verwenden Sie eine geeignete grafische Darstellung der Daten / Ergebnisse.
+
+```{r}
+# Boxplot (diets)
+boxplot(weightloss$wloss ~ weightloss$diet,
+        main = "Gewichtsabnahme in Abhängigkeit der Diät",
+        xlab = "Diät",
+        ylab = "Gewichtsabnahme (in kg)")
+
+```
+
+
+```{r}
+# Boxplot (diets)
+ggplot(weightloss, aes(x = diet, y = wloss)) +
+  geom_boxplot() +
+  labs(title = "Gewichtsabnahme in Abhängigkeit der Diät",
+       x = "Diät",
+       y = "Gewichtsabnahme (in kg)")
+
+# Boxplot (activities)
+ggplot(weightloss, aes(x = exercise, y = wloss)) +
+  geom_boxplot() +
+  labs(title = "Gewichtsabnahme in Abhängigkeit der Aktivität",
+       x = "Aktivität",
+       y = "Gewichtsabnahme (in kg)")
+
+# Boxplot (diets & activities)
+ggplot(weightloss, aes(x = diet, y = wloss, fill = exercise)) +
+  geom_boxplot() +
+  labs(title = "Gewichtsabnahme in Abhängigkeit der Diät und Aktivität",
+       x = "Diät",
+       y = "Gewichtsabnahme (in kg)",
+       fill = "Aktivität")
+
+# Ausreißer bereinigen (median +- 1.5 IQR)
+library(dplyr)
+weightloss_clean <- weightloss %>%
+  group_by(diet, exercise) %>%
+  mutate(lb = quantile(wloss, 0.25) - 1.5 * IQR(wloss),
+         ub = quantile(wloss, 0.75) + 1.5 * IQR(wloss)) %>%
+  filter(wloss >= lb & wloss <= ub)
+
+
+# Boxplot (diets & activities)
+ggplot(weightloss_clean, aes(x = diet, y = wloss, fill = exercise)) +
+  geom_boxplot() +
+  labs(title = "Gewichtsabnahme in Abhängigkeit der Diät und Aktivität",
+       x = "Diät",
+       y = "Gewichtsabnahme (in kg)",
+       fill = "Aktivität")
+
+
+```
+
 i) Gibt es signifikante Haupteffekte sowie Interaktionseffekte (inkl. Interaktions-Plot)?
+
 i) Achten Sie auf eine "statistisch korrekte" Formulierung des Ergebnisses.
 
 # 5 Mehrfaktorielle ANOVA [2P]
