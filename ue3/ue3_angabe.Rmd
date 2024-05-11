@@ -15,7 +15,6 @@ output:
 Alle Aufgaben sind mit R zu lössen, wenn nicht explizit anders angegeben. Die Berechnungen sollen nachvollziehbar und dokumentiert sein. Um die vollständige Punktezahl zu erreichen, müssen alle Ergebnisse und Fragen entsprechend interpretiert bzw. beantwortet werden. Code alleine ist nicht ausreichend! Die Abgabe erfolgt über Moodle entsprechend der Abgaberichtlinien als pdf und Rmd File. Bitte inkludieren Sie namentlich alle beteiligten Gruppenmitglieder sowohl im Bericht als auch im Source Code.
 Die jeweiligen Datensätze die für diese Übung relevant sind finden Sie ebenfalls in Moodle.
 
-
 # 1 Einfaktorielle ANOVA (händisch) [2P]
 Ein Sportwissenschafter möchte sehen, ob es einen Unterschied in der Gewichtszunahme von Sportlern gibt, die einer von drei speziellen Diäten folgen. Die Athleten werden nach dem Zufallsprinzip drei Gruppen zugewiesen und unterziehen sich für 6 Wochen der jeweiligen Diät. Die Gewichtszunahmen (in Pfund) sind angegeben. Nehmen Sie an, dass die Gewichtszunahmen normalverteilt sind und die Varianzen gleich sind. Kann der Sportwissenschafter bei einem Signifikanzniveau von 0,05 schlussfolgern, dass es einen Unterschied zwischen den Diäten gibt? Führen Sie die ANOVA händisch durch und überprüfen Sie das Ergebnis mit `summary(aov(...))`.
 
@@ -54,6 +53,8 @@ for (group in gains) {
   qs_between <- qs_between + n * (group_mean - mean_total)^2
 }
 
+paste("Die Quadratsumme zwischen den Gruppen beträgt: ", round(qs_between,2))
+
 qs_within <- 0
 for (group in gains) {
   group_mean <- mean(group)
@@ -62,7 +63,11 @@ for (group in gains) {
   }
 }
 
+paste("Die Quadratsumme innerhalb der Gruppen beträgt: ", round(qs_within,2))
+
 qs_total <- sum((unlist(gains) - mean_total)^2)
+
+paste("Die Quadratsumme insgesamt beträgt: ", round(qs_total,2))
 
 # Prüfung der Quadratsummen
 round(qs_total, 2)==round(qs_between + qs_within, 2)
@@ -73,8 +78,6 @@ round(qs_total, 2)==round(qs_between + qs_within, 2)
 for (group in gains) {
   print(shapiro.test(group))
 }
-
-# 
 
 # Varianzhomogenität (Barlet-Test)
 bartlett.test(gains)
@@ -91,10 +94,12 @@ ms_within <- qs_within / df_within
 
 # Berechnung des F-Wertes
 f_value <- ms_between / ms_within
+paste("Der F-Wert beträgt: ", round(f_value, 2))
 
 # kritischer F-Wert aus Tabelle
 alpha <- 0.05
-f_critical <- qf(1 - alpha, df_between, df_within,lower.tail = F)
+f_critical <- qf(alpha, df_between, df_within,lower.tail = F)
+paste("Der kritische F-Wert beträgt: ", round(f_critical, 2))
 
 # Ergebnis
 if (f_value > f_critical) {
@@ -105,6 +110,7 @@ if (f_value > f_critical) {
 
 # p-Wert
 p_value <- pf(f_value, df_between, df_within, lower.tail = F)
+paste("Der berechnete p-Wert beträgt: ", round(p_value,5))
 
 # Überprüfung mit R
 diet <- factor(rep(names(gains), times = sapply(gains, length)))
@@ -112,10 +118,6 @@ all_gains <- unlist(gains)
 
 aov_result <- aov(all_gains ~ diet)
 summary(aov_result)
-
-# Effektgröße
-eta_squared <- qs_between / qs_total
-
 ```
 
 Interpretation: Es gibt einen signifikanten Einfluss des Faktors Diät, F(2,11) = 7.74; p < 0.05. Als Effektgröße wurde ein Eta-Quadrat von 0.58 berechnet. Das Eta-Quadrat schätzt den Anteil der Varianz, der durch den eine Variable erklärt wird. Jedoch ist der Literatur zu entnehmen, dass der Einfluss in der Varianz durch diese Maßzahl meist überschätzt wird.
@@ -138,6 +140,7 @@ birthwt$ethnic <- factor(birthwt$ethnic, levels = c(1,2,3), labels = c("white", 
 
 # Überblick über die Daten
 str(birthwt)
+table(birthwt$ethnic)
 summary(birthwt$bwt)
 
 # Hypothesen
@@ -148,33 +151,34 @@ summary(birthwt$bwt)
 
 # Normalverteilung (für jede Gruppe)
 par(mfrow = c(1,3))
-hist(birthwt$bwt[birthwt$ethnic == 'white'], main = "ehnic 1 (white)")
-hist(birthwt$bwt[birthwt$ethnic == 'black'], main = "ehnic 2 (black)")
-hist(birthwt$bwt[birthwt$ethnic == 'other'], main = "ehnic 3 (other)")
+hist(birthwt$bwt[birthwt$ethnic == 'white'], main = "ethnic 1 (white)")
+hist(birthwt$bwt[birthwt$ethnic == 'black'], main = "ethnic 2 (black)")
+hist(birthwt$bwt[birthwt$ethnic == 'other'], main = "ethnic 3 (other)")
 
 ethics <- unique(birthwt$ethnic)
 # Shapiro-Wilk-Test
 for (ethic in ethics) {
+  print(ethic)
   print(shapiro.test(birthwt$bwt[birthwt$ethnic == ethic]))
 }
 
 ```
-Ein visuelle Überprüfung der Normalverteilung zeigt, dass diese für alle Gruppen gegeben ist. Der Shapiro-Wilk-Test bestätigt diese Annahme, weshalb die Normalverteilung als gegeben angenommen werden kann
+Ein visuelle Überprüfung der Normalverteilung zeigt, dass diese für alle Gruppen gegeben ist. Der Shapiro-Wilk-Test bestätigt diese Annahme, weshalb die Annahme der Normalverteilung erfüllt ist.
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 # Varianzhomogenität (Heteroskedastizität)
 
 # Levene-Test
 library(car)
-leveneTest(bwt ~ as.factor(ethnic), data = birthwt)
+leveneTest(bwt ~ ethnic, data = birthwt)
 
 # Bartlett-Test
-bartlett.test(birthwt$bwt ~ as.factor(birthwt$ethnic))
+bartlett.test(birthwt$bwt ~ birthwt$ethnic)
 
 ```
 Sowohl der Levene- als auch der Bartlett-Test zeigen, dass die Varianzhomogenität gegeben ist. 
 
-Die Vorraussetzungen für die ANOVA sind somit gegeben und sie kann ohne Bedenken durchgeführt werden.
+Alle wesentlichen Vorraussetzungen für die ANOVA sind somit gegeben und sie kann ohne Bedenken durchgeführt werden.
 
 ```{r}
 # ANOVA
@@ -183,20 +187,18 @@ summary(aov_result)
 
 # Darstellung der Ergebnisse
 library(ggplot2)
-ggplot(birthwt, aes(x = as.factor(ethnic), y = bwt)) +
+ggplot(birthwt, aes(x = ethnic, y = bwt)) +
   geom_boxplot() +
   labs(title = "Geburtsgewicht in Abhängigkeit der ethnischen Zugehörigkeit",
        x = "ethnische Zugehörigkeit",
        y = "Geburtsgewicht")
 
 ```
-F_value = 4.91, p = 0.008 (p < 0.05) -> H0 wird verworfen
+Die ethnische Zugehörigkeit hat einen signifikanten Einfluss auf das Geburtsgewicht von Neugeborenen, F(2,186) = 4.91, p = 0.008.
 
-Die ethnische Zugehörigkeit hat einen signifikanten Einfluss auf das Geburtsgewicht von Neugeborenen, F(2,186)=4.91, p = 0.008.
+Um herauszufinden zwischen welchen Gruppen signifikante Unterschiede bestehen, wird nun eine Post-Hoc-Analyse durchgeführt. Als geeigneter Test wird der Tukey HSD-Test verwendet.
 
-Um herauszufinden zwischen welchen Gruppen die Unterschiede bestehen, wird nun ein Post-Hoc-Test durchgeführt. Als geeigneter Test wird der Tukey HSD-Test verwendet.
-
-```{r}
+```{r, warning=FALSE, message=FALSE}
 # Post-Hoc-Test
 pht <- TukeyHSD(aov_result)
 print(pht)
@@ -210,14 +212,16 @@ stat.test <- tibble::tribble(
   "white",     "other", round(pht$ethnic[2,4],6),
   "black",     "other", round(pht$ethnic[3,4],6))
 
-# Boxplot erstellen
+# Boxplots (inkl. p-Werte)
 ggboxplot(birthwt, x = "ethnic", y = "bwt",
-          color = "ethnic", 
-          palette = "jco") +
+          fill = "ethnic", 
+          palette = "jco",
+          ylab = "birthweight") +
   stat_pvalue_manual(stat.test,
                      y.position = 5500, step.increase = 0.2,
                      label = "p.adj")
 ```
+Der Tukey HSD-Test zeigt, dass es signifikante Unterschiede zwischen den ethnischen Gruppen "white" und "black" (p = 0.043) sowie "white" und "other" (p = 0.026) gibt. Zwischen den Gruppen "black" und "other" besteht hingegen kein signifikanter Unterschied (p = 0.862). Konkret wiegen schwarze Neugeborene durchschnittlich 383,03 Gramm weniger als weiße. Neugeborene aus anderen ethnischen Gruppen weisen ebenfalls ein signifikant geringeres Geburtsgewicht auf als weiße Neugeborene, mit einem durchschnittlichen Unterschied von 297,44 Gramm. Im Vergleich zwischen schwarzen und anderen ethnischen Gruppen gibt es jedoch keinen signifikanten Unterschied im Geburtsgewicht, wie die Analyse mit einem p-Wert von 0,8624 zeigt.
 
 # 3 Einfaktorielle ANOVA [2P]
 
@@ -232,6 +236,9 @@ i) Achten Sie auf eine "statistisch korrekte" Formulierung des Ergebnisses.
 Sie führen eine Studie bezüglich des Einflusses unterschiedlicher Diäten und Aktivitätslevels auf den Erfolg bei der Gewichtsabnahme durch. Jedem Probanden wird eine Diät und ein Aktivitätslevel zugewiesen und die Differenz zum Ausgangsgewicht nach 2 Monaten gemessen (in kg). Die Daten der Studie sind in `weightloss.sav` zusammengefasst. Analysieren Sie ob die beiden Faktoren einen Einfluss auf das Gewicht haben.
 
 i) Überprüfen Sie die Vorraussetzungen.
+i) Verwenden Sie eine geeignete grafische Darstellung der Daten / Ergebnisse.
+i) Gibt es signifikante Haupteffekte sowie Interaktionseffekte (inkl. Interaktions-Plot)?
+i) Achten Sie auf eine "statistisch korrekte" Formulierung des Ergebnisses.
 
 ```{r}
 # Laden der Daten
@@ -241,6 +248,16 @@ weightloss <- read.spss("UE3 Daten/weightloss.sav", to.data.frame = TRUE)
 str(weightloss)
 summary(weightloss)
 
+# Hypothesen
+
+# H0 (Diät): mu_noDiet = mu_vegetarian = mu_atkins
+# H0 (Activität): mu_none = mu_30 = mu_60
+# H0 (Interaktion): Alle Mittelwertunterschiede werden durch die Haupteffekte erklärt.
+```
+
+Nun werden die Vorraussetzungen für die ANOVA überprüft.
+
+```{r}
 # Überprüfen der Vorraussetzungen
 
 # -- für Diet-Gruppen
@@ -280,7 +297,7 @@ for(activity in unique_activities) {
 
   # Histogramm erstellen
   hist(activity_data, probability = TRUE,
-       main = paste("Histogramm f.", activity),
+       main = paste("Exercise:", activity),
        xlab = "Gewichtsabnahme (kg)",
        col = "gray", border = "black",
        ylim = c(0, 0.15))
@@ -300,7 +317,7 @@ for (activity in unique_activities) {
 # Levene-Test
 leveneTest(wloss ~ diet, data = weightloss)
 leveneTest(wloss ~ exercise, data = weightloss)
-leveneTest(wloss ~ diet * activity, data = weightloss)
+leveneTest(wloss ~ diet * exercise, data = weightloss)
 
 # Bartlett-Test
 bartlett.test(wloss ~ diet, data = weightloss)
@@ -308,18 +325,16 @@ bartlett.test(wloss ~ exercise, data = weightloss)
 
 ```
 
-
-i) Verwenden Sie eine geeignete grafische Darstellung der Daten / Ergebnisse.
+Die Überprüfung der Varianzhomogenität mittels Levene-Test und Bartlett-Test ergab keine signifikanten Unterschiede in den Varianzen zwischen den Diät- und Aktivitätsgruppen. Somit erfüllen die Daten die Voraussetzung der Varianzhomogenität für die Durchführung einer mehrfaktoriellen ANOVA. Es ist somit statistisch angemessen, die Haupteffekte sowie den Interaktionseffekt der beiden Variablen zu analysieren.
 
 ```{r}
-# Boxplot (diets)
-boxplot(weightloss$wloss ~ weightloss$diet,
-        main = "Gewichtsabnahme in Abhängigkeit der Diät",
-        xlab = "Diät",
-        ylab = "Gewichtsabnahme (in kg)")
+# Durchführung der ANOVA
+summary(aov(wloss~diet+exercise,data=weightloss))
 
+#mit Interaktionseffekte
+summary(aov(wloss~diet*exercise,data=weightloss))
 ```
-
+**Ergebnisse der ANOVA**
 
 ```{r}
 # Boxplot (diets)
@@ -352,21 +367,99 @@ weightloss_clean <- weightloss %>%
          ub = quantile(wloss, 0.75) + 1.5 * IQR(wloss)) %>%
   filter(wloss >= lb & wloss <= ub)
 
-
 # Boxplot (diets & activities)
 ggplot(weightloss_clean, aes(x = diet, y = wloss, fill = exercise)) +
   geom_boxplot() +
-  labs(title = "Gewichtsabnahme in Abhängigkeit der Diät und Aktivität",
+  labs(title = "Gewichtsabnahme in Abhängigkeit der Diät und Aktivität (ausreißerbereinigt)",
        x = "Diät",
        y = "Gewichtsabnahme (in kg)",
        fill = "Aktivität")
 
+```
+i) Gibt es signifikante Haupteffekte sowie Interaktionseffekte (inkl. Interaktions-Plot)?
+
+Der Faktor Diet (Df=2) hatte einen signifikanten Einfluss auf die Gewichtsabnahme mit einem F-Wert von 21.124 und einem p-Wert von weniger als 0.00001 (6.33e-09). 
+
+Das Bewegungsausmaß (Df=2) hatte einen noch stärkeren Einfluss auf die Gewichtsabnahme mit einem F-Wert von 87.589 und einem p-Wert von kleiner als 0.00001 (< 2e-16).
+
+Die Interaktion zwischen Diät und Bewegung (Df = 4) war nicht signifikant mit einem F-Wert von 0.937 und einem p-Wert von 0.444. Dies bedeutet, dass die Wechselwirkung zwischen Diät und Bewegung keinen signifikanten Beitrag zur Erklärung der Gewichtsabnahme liefert.
+
+```{r}
+# Interaktionsplots (simple)
+ip_act <- interaction.plot(weightloss$diet, weightloss$exercise, weightloss$wloss, 
+                 col = c("darkorange", "darkgreen", "blue"),
+                 pch = c(1, 2, 3), fixed = FALSE, xlab = "Diät", 
+                 ylab = "Gewichtsabnahme (in kg)", trace.label = "Aktivität")
+
+ip_diet <- interaction.plot(weightloss$exercise, weightloss$diet, weightloss$wloss, 
+                 col = c("darkorange", "darkgreen", "blue"),
+                 pch = c(1, 2, 3), fixed = FALSE, xlab = "Aktivität", 
+                 ylab = "Gewichtsabnahme (in kg)", trace.label = "Diät")
 
 ```
 
-i) Gibt es signifikante Haupteffekte sowie Interaktionseffekte (inkl. Interaktions-Plot)?
+```{r,message=FALSE}
+# Interaktionsplot (ggpubr)
+library(ggpubr)
+ggline(weightloss, x = "diet", y = "wloss", color = "exercise", size = 1.1,
+       add = c("mean_se","dotplot"))
+ggline(weightloss, x = "exercise", y = "wloss", color = "diet", size = 1.1,
+       add = c("mean_se","dotplot"))
+```
+Interaktionsplot 1: Dieser Plot zeigt die Gewichtsabnahme aufgeteilt nach Diättyp und gruppiert nach Aktivitätsniveau. Die drei Linien repräsentieren die unterschiedliche Aktivitätsniveaus. Auffallend ist hier, dass sich die Linien für keine Aktivität und die des mittleren Atktivitätsniveaus bei der Atkins-Diet kreuzen. Dies könnte auf eine leichte semidisordinale Interaktion, in diesem Fall hindeuten. Allerdings war die Interaktion in der ANOVA statistisch nicht signifikant (p = 0.444), somit ist diese visuell wahrgenommene Interaktion möglicherweise nicht stark genug ist, um statistisch statistische Signifikanz zu erreichen.
 
-i) Achten Sie auf eine "statistisch korrekte" Formulierung des Ergebnisses.
+Interaktionsplot 2: Auf diesem Plot ist die Gewichtsabnahme aufgeteilt nach Aktivitätsniveau und gruppiert nach Diättyp. Die drei Linien repräsentieren die unterschiedlichen Diättypen. Die Linien zeigen sehr ähnliche Trends auf, und kreuzen sich nicht. Dies unterstützt das ANOVA-Ergebnis, dass keine signifikante Interaktion vorliegt.
+Die Linie für "60 minutes per day" zeigt durchwegs die höchsten Werte, was die starke Wirkung eines erhöhten Aktivitätsniveau auf die Gewichtsabnahme unterstreicht, unabhängig von der gewählten Diät.
+
+Um die Unterschiede zwischen den Gruppen genauer zu untersuchen, werden folglich Post-hoc-Tests durchgeführt. Hierfür eignen sich beispielsweise der Tukey's HSD-Test.
+
+```{r}
+# Post-hoc Tests
+pht_diet <- TukeyHSD(aov(wloss~diet*exercise,data=weightloss),which="diet")
+pht_act <- TukeyHSD(aov(wloss~diet*exercise,data=weightloss),which="exercise")
+```
+
+```{r}
+# Darsellung der Post-hoc Test Ergebnisse
+stat.test_diet <- tibble::tribble(
+  ~group1, ~group2,   ~p.adj,
+  "Atkins",     "None", round(pht_diet$diet[1,4],6),
+  "Vegetarian",     "None", round(pht_diet$diet[2,4],6),
+  "Vegetarian",     "Atkins", round(pht_diet$diet[3,4],6))
+
+# Boxplot 
+ggboxplot(weightloss, x = "diet", y = "wloss",
+          fill = "diet", 
+          palette = "Okabe-Ito",
+          ylab = "weightloss") +
+  stat_pvalue_manual(stat.test_diet,
+                     y.position = 17, step.increase = 0.2,
+                     label = "p.adj")
+
+stat.test_act <- tibble::tribble(
+  ~group1, ~group2,   ~p.adj,
+  "30 minutes per day",     "None", round(pht_act$exercise[1,4],6),
+  "60 minutes per day",     "None", round(pht_act$exercise[2,4],6),
+  "60 minutes per day",     "30 minutes per day", round(pht_act$exercise[3,4],6))
+
+# Boxplot
+ggboxplot(weightloss, x = "exercise", y = "wloss",
+          fill = "exercise", 
+          palette = "Okabe-Ito",
+          ylab = "weightloss") +
+  stat_pvalue_manual(stat.test_act,
+                     y.position = 12, step.increase = 0.2,
+                     label = "p.adj")
+
+```
+Interpretation: 
+Eine 2x3 ANOVA wurde durchgeführt, um den Einfluss unterschiedlicher Diäten (Keine, Atkins, Vegetarisch) und Aktivitätsniveaus (Keine, 30 min/Tag, 60 min/Tag) auf die Gewichtsabnahme zu untersuchen. Es wurde ein signifikanter Haupteffekt des Faktors Diät [F(2,171)=21.12,p < 0.01] oder das Aktivitätsniveau [F(2,171)=87.59,p < 0.01] gefunden. Die Interaktion zwischen Diät und Aktivitätsniveau war nicht signifikant (p = 0.444). 
+
+Post-hoc-Tests Analysen zeigten signifikanten Unterschiede zwischen einzelnen Diätgruppen und Aktivitätsniveaus. 
+
+Personen, die eine vegetarische Diät befolgten, verloren durchschnittlich 3,47 kg mehr als jene ohne spezielle Diät und um 2 kg mehr als Personen, die der Atkins-Diät folgen. Diese Unterschiede sind statistisch signifikant, was die vegetarische Diät als besonders effektiv herausstellt. Die Atkins-Diät zeigt ebenfalls eine überlegene Wirkung im Vergleich zu keiner Diät mit einer signifikant höheren mittleren Gewichtsabnahme von 1,47 kg.
+
+Die tägliche Dauer der körperlichen Aktivität spielte ebenfalls eine entscheidende Rolle bei der Gewichtsreduktion. Die Analyse ergab, dass 60 Minuten tägliche Bewegung zu einer signifikant höheren Gewichtsabnahme von 6,28 kg im Vergleich zu keiner Bewegung führte. Selbst im Vergleich zu 30 Minuten täglicher Aktivität ist das längere Training mit einer zusätzlichen Gewichtsabnahme von fast 6 kg deutlich effektiver. Im Gegensatz dazu zeigt die geringere Dauer von 30 Minuten keine signifikante Wirkung gegenüber keiner Bewegung.
 
 # 5 Mehrfaktorielle ANOVA [2P]
 Verwenden Sie den erneut den `Framingham.sav` Datensatz. Analysieren Sie den systolischen Blutdruck `sysbp` abhängig von Geschlecht und Bildungsstufe. Achten Sie auf Ausreißer und fehlende Daten (`NaN, NA's`).
