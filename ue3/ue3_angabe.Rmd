@@ -727,4 +727,77 @@ ggplot(framingham_clean, aes(x = educ, y = sysbp, fill = sex)) +
 ```
 
 i) Gibt es signifikante Haupteffekte sowie Interaktionseffekte (inkl. Interaktions-Plot)?
+
+```{r}
+# Interaction plots (simple)
+ip_educ <- interaction.plot(framingham$educ, framingham$sex, framingham$sysbp, 
+                 col = c("darkorange", "darkgreen", "blue"),
+                 pch = c(1, 2, 3), fixed = FALSE, xlab = "Bildungsgrad", 
+                 ylab = "Sys. Blutdruck in mmHg", trace.label = "Geschlecht")
+
+ip_sex <- interaction.plot(framingham$sex, framingham$educ, framingham$sysbp, 
+                 col = c("darkorange", "darkgreen", "blue"),
+                 pch = c(1, 2, 3), fixed = FALSE, xlab = "Geschlecht", 
+                 ylab = "Sys. Blutdruck in mmHg", trace.label = "Bildungsgrad")
+
+```
+```{r,message=FALSE}
+# Interaction plots (ggpubr)
+ggline(framingham, x = "educ", y = "sysbp", color = "sex", size = 1.1,
+       add = c("mean_se","dotplot"))
+ggline(weightloss, x = "sex", y = "sysbp", color = "educ", size = 1.1,
+       add = c("mean_se","dotplot"))
+```
+
+
+```{r}
+# Post hoc tests
+pht_educ <- TukeyHSD(aov(sysbp~educ*sex,data=framingham),which="educ")
+pht_sex <- TukeyHSD(aov(sysbp~educ*sex,data=framingham),which="sex")
+```
+
+```{r}
+# TO DO:
+
+# Darsellung der Post-hoc Test Ergebnisse
+stat.test_educ <- tibble::tribble(
+  ~group1, ~group2,   ~p.adj,
+  "1",     "2", round(pht$educ[1,4],6),
+  "1",     "3", round(pht$educ[2,4],6),
+  "1",     "4", round(pht$educ[3,4],6),
+  "2",     "3", round(pht$educ[4,4],6),
+  "2",     "4", round(pht$educ[5,4],6),
+  "3",     "4", round(pht$educ[6,4],6))
+
+# Determine the maximum value of the 'bmi' column
+max_sysbp <- max(framingham$sysbp, na.rm = TRUE)
+
+# Create an array of y positions starting from the maximum BMI value and incrementing by a small amount
+y_positions <- max_sysbp + seq(from = 1, to = 6, by = 1)
+
+# Boxplot 
+ggboxplot(framingham, x = "educ", y = "sysbp",
+          fill = "educ", 
+          palette = "Okabe-Ito",
+          ylab = "Sys. Blutdruck in mmHg") +
+  stat_pvalue_manual(stat.test_educ,
+                     y.position = y_positions,
+                     step.increase = 0.2,
+                     label = "p.adj")
+
+stat.test_sex <- tibble::tribble(
+  ~group1, ~group2,   ~p.adj,
+  "1",     "2", round(pht_sex$sex[1,4],6))
+
+
+# Boxplot
+ggboxplot(framingham, x = "sex", y = "sysbp",
+          fill = "sex", 
+          palette = "Okabe-Ito",
+          ylab = "Sys. Blutdruck in mmHg") +
+  stat_pvalue_manual(stat.test_sex,
+                     y.position = max_sysbp,
+                     label = "p.adj")
+
+```
 i) Achten Sie auf eine "statistisch korrekte" Formulierung des Ergebnisses.
