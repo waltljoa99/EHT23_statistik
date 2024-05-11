@@ -11,6 +11,82 @@ output:
   word_document: default
 ---
 
+```{r setup, include=FALSE}
+## Run this chunk ALWAYS first !
+# Arbeitsverzeichnis für VSC Nutzer korrekt setzen
+# Nötige Packages installieren und laden
+# Helfer Funktionen für alle Nutzer laden
+
+# Set relative path to target working directory
+rel_path_to_target_dir <- "ue3"
+# Helper file name
+rel_path_from_target_dir_to_helper_file <- "helper.R"
+
+# Check if the code is run in RStudio
+checkIDEisRStudio <- function() {
+  isRStudio <- Sys.getenv("RSTUDIO") == "1"
+  if (isRStudio) {
+    return(TRUE)
+  } else {
+    return(FALSE)
+  }
+}
+
+# The working directory is only changed if the code is NOT run in RStudio
+if (!checkIDEisRStudio()) {
+  # Change relative path accordingly to your target working directory
+  abs_path_to_target_dir <- file.path(getwd(),rel_path_to_target_dir)
+  # Check if target directory exists
+  if(dir.exists(abs_path_to_target_dir)){
+    setwd(abs_path_to_target_dir)
+  }
+}
+
+# Check whether package is already installed, if not install it
+load <- function(package_name) {
+  if (!(package_name %in% installed.packages())) {
+    # Set the CRAN mirror
+    options(repos = c(CRAN = "https://cran.wu.ac.at/"))
+    install.packages(package_name)
+  }
+  library(package_name, character.only = TRUE)
+}
+
+# Load packages
+load("pROC")
+load("caret")
+load("ResourceSelection")
+load("foreign")
+load("haven")
+load("tidyverse")
+load("car")
+load("ggplot2")
+load("stats")
+load("ROCit")
+load("ggpubr")
+
+
+
+
+# Function to source helper file
+load_source <- function() {
+    if(!checkIDEisRStudio()){
+      if(file.exists(rel_path_from_target_dir_to_helper_file)){
+        source(rel_path_from_target_dir_to_helper_file)
+      }
+    } else {
+      helper_file <- basename(rel_path_from_target_dir_to_helper_file)
+      if(file.exists(helper_file)){
+        source(helper_file)
+      }
+  }
+}
+# Apply function to source helper file
+load_source()
+
+
+```
+
 # Allgemeine Information
 Alle Aufgaben sind mit R zu lössen, wenn nicht explizit anders angegeben. Die Berechnungen sollen nachvollziehbar und dokumentiert sein. Um die vollständige Punktezahl zu erreichen, müssen alle Ergebnisse und Fragen entsprechend interpretiert bzw. beantwortet werden. Code alleine ist nicht ausreichend! Die Abgabe erfolgt über Moodle entsprechend der Abgaberichtlinien als pdf und Rmd File. Bitte inkludieren Sie namentlich alle beteiligten Gruppenmitglieder sowohl im Bericht als auch im Source Code.
 Die jeweiligen Datensätze die für diese Übung relevant sind finden Sie ebenfalls in Moodle.
@@ -155,11 +231,10 @@ hist(birthwt$bwt[birthwt$ethnic == 'white'], main = "ethnic 1 (white)")
 hist(birthwt$bwt[birthwt$ethnic == 'black'], main = "ethnic 2 (black)")
 hist(birthwt$bwt[birthwt$ethnic == 'other'], main = "ethnic 3 (other)")
 
-ethics <- unique(birthwt$ethnic)
+ethnics <- unique(birthwt$ethnic)
 # Shapiro-Wilk-Test
-for (ethic in ethics) {
-  print(ethic)
-  print(shapiro.test(birthwt$bwt[birthwt$ethnic == ethic]))
+for (ethnic in ethnics) {
+  print(shapiro.test(birthwt$bwt[birthwt$ethnic == ethnic]))
 }
 
 ```
@@ -228,8 +303,118 @@ Der Tukey HSD-Test zeigt, dass es signifikante Unterschiede zwischen den ethnisc
 Verwenden Sie den bereits bekannten `Framingham.sav` Datensatz. Analysieren Sie ob es Unterschiede im BMI in Abhängigkeit von der Schulbildung gibt. Achten Sie auf Ausreißer und fehlende Daten (`NaN, NA's`).
 
 i) Überprüfen Sie die Vorraussetzungen.
+
+```{r}
+load_source()
+
+# Load and clean data. Handle factor variables
+framingham <- load_and_prepare_framingham("UE3 Daten/Framingham.sav")
+
+# Check requirements for ANOVA
+
+# -- For education levels
+
+test_normality_of_groups(framingham, "educ", "bmi")
+```
+```{r}
+# Variance inhomogeneity (Heteroscedasticity)
+
+# Levene test
+leveneTest(bmi ~ educ, data = framingham)
+
+# Bartlett test
+bartlett.test(bmi ~ educ, data = framingham)
+```
+
 i) Verwenden Sie eine geeignete grafische Darstellung der Daten / Ergebnisse.
+
+```{r}
+# Open a new graphics device
+dev.new()
+
+# Boxplot (education levels)
+boxplot(framingham$bmi ~ framingham$educ,
+        main = "BMI in Abhängigkeit des Bildungsgrad",
+        xlab = "Bildungsgrad",
+        ylab = "BMI in kg/m^2")
+
+```
+```{r}
+# Boxplot education levels
+ggplot(framingham, aes(x = educ, y = bmi)) +
+  geom_boxplot() +
+  labs(title = "BMI in Abhängigkeit des Bildungsgrades",
+       x = "Bildungsgrad",
+       y = "BMI in kg/m^2")
+
+# Remove outliers (median +- 1.5 IQR)
+library(dplyr)
+framingham_clean <- framingham %>%
+  group_by(educ) %>%
+  mutate(lower_bound = quantile(bmi, 0.25) - 1.5 * IQR(bmi),
+         upper_bound = quantile(bmi, 0.75) + 1.5 * IQR(bmi)) %>%
+  filter(bmi >= lower_bound & bmi <= upper_bound)
+
+# Boxplot education levels without outliers
+ggplot(framingham_clean, aes(x = educ, y = bmi)) +
+  geom_boxplot() +
+  labs(title = "BMI in Abhängigkeit des Bildungsgrades",
+       x = "Bildungsgrad",
+       y = "BMI in kg/m^2")
+
+
+```
+
 i) Gibt es signifikante Unterschiede zwischen den Bildungsstufen, wenn ja zwischen welchen Stufen?
+
+
+```{r}
+# ANOVA
+aov_result <- aov(bmi ~ educ, data = framingham)
+summary(aov_result)
+
+# Show results
+library(ggplot2)
+ggplot(framingham, aes(x = educ, y = bmi)) +
+  geom_boxplot() +
+  labs(title = "BMI in Abhängigkeit des Bildungsgrades",
+       x = "Bildungsgrad",
+       y = "BMI in kg/m^2")
+
+```
+```{r}
+# Post hoc analysis
+pht <- TukeyHSD(aov_result)
+print(pht)
+
+# Show results
+library(ggpubr)
+
+stat.test <- tibble::tribble(
+  ~group1, ~group2,   ~p.adj,
+  "1",     "2", round(pht$educ[1,4],6),
+  "1",     "3", round(pht$educ[2,4],6),
+  "1",     "4", round(pht$educ[3,4],6),
+  "2",     "3", round(pht$educ[4,4],6),
+  "2",     "4", round(pht$educ[5,4],6),
+  "3",     "4", round(pht$educ[6,4],6))
+
+# Determine the maximum value of the 'bmi' column
+max_bmi <- max(framingham$bmi, na.rm = TRUE)
+
+# Create an array of y positions starting from the maximum BMI value and incrementing by a small amount
+y_positions <- max_bmi + seq(from = 1, to = 6, by = 1)
+
+# Create boxplot
+ggboxplot(framingham, x = "educ", y = "bmi",
+          color = "educ", 
+          palette = "jco") +
+  stat_pvalue_manual(stat.test,
+                     y.position = y_positions, 
+                     step.increase = 0.2,
+                     label = "p.adj")
+```
+
 i) Achten Sie auf eine "statistisch korrekte" Formulierung des Ergebnisses.
 
 # 4 Mehrfaktorielle ANOVA [2P]
@@ -465,6 +650,81 @@ Die tägliche Dauer der körperlichen Aktivität spielte ebenfalls eine entschei
 Verwenden Sie den erneut den `Framingham.sav` Datensatz. Analysieren Sie den systolischen Blutdruck `sysbp` abhängig von Geschlecht und Bildungsstufe. Achten Sie auf Ausreißer und fehlende Daten (`NaN, NA's`).
 
 i) Überprüfen Sie die Vorraussetzungen.
+
+```{r}
+load_source()
+
+# Open a new graphics device
+dev.new()
+
+# Load and clean data. Handle factor variables
+framingham <- load_and_prepare_framingham("UE3 Daten/Framingham.sav")
+
+# Check requirements for ANOVA
+
+# -- For education levels
+
+test_normality_of_groups(framingham,"educ", "sysbp")
+
+# -- For sex
+
+test_normality_of_groups(framingham,"sex","sysbp")
+
+# Variance inhomogeneity (Heteroscedasticity)
+
+# Levene test
+leveneTest(sysbp ~ educ, data = framingham)
+leveneTest(sysbp ~ sex, data = framingham)
+leveneTest(sysbp ~ educ * sex, data = framingham)
+
+# Bartlett test
+bartlett.test(sysbp ~ educ, data = framingham)
+bartlett.test(sysbp ~ sex, data = framingham)
+```
 i) Verwenden Sie eine geeignete grafische Darstellung der Daten / Ergebnisse.
+
+```{r}
+# Boxplot education levels
+ggplot(framingham, aes(x = educ, y = sysbp)) +
+  geom_boxplot() +
+  labs(title = "Sys. Blutdruck in Abhängigkeit des Bildungsgrades",
+       x = "Bildungsgrad",
+       y = "Sys. Blutdruck in mmHg")
+
+# Boxplot sexes
+ggplot(framingham, aes(x = sex, y = sysbp)) +
+  geom_boxplot() +
+  labs(title = "Sys. Blutdruck in Abhängigkeit des Geschlechts",
+       x = "Geschlecht",
+       y = "Sys. Blutdruck in mmHg")
+
+# Boxplot education levels & sexes
+ggplot(framingham, aes(x = educ, y = sysbp, fill = sex)) +
+  geom_boxplot() +
+  labs(title = "Sys. Blutdruck in Abhängigkeit des Bildungsgrades und Geschlechts",
+       x = "Bildungsgrad",
+       y = "Sys. Blutdruck in mmHg",
+       fill = "Geschlecht")
+
+# Remove outliers (median +- 1.5 IQR)
+library(dplyr)
+framingham_clean <- framingham %>%
+  group_by(educ, sex) %>%
+  mutate(lb = quantile(sysbp, 0.25) - 1.5 * IQR(sysbp),
+         ub = quantile(sysbp, 0.75) + 1.5 * IQR(sysbp)) %>%
+  filter(sysbp >= lb & sysbp <= ub)
+
+
+# Boxplot (diets & activities)
+ggplot(framingham_clean, aes(x = educ, y = sysbp, fill = sex)) +
+  geom_boxplot() +
+  labs(title = "Sys. Blutdruck in Abhängigkeit des Bildungsgrades und Geschlechts",
+       x = "Bildungsgrad",
+       y = "Sys. Blutdruck in mmHg",
+       fill = "Geschlecht")
+
+
+```
+
 i) Gibt es signifikante Haupteffekte sowie Interaktionseffekte (inkl. Interaktions-Plot)?
 i) Achten Sie auf eine "statistisch korrekte" Formulierung des Ergebnisses.
