@@ -35,7 +35,7 @@ load_and_prepare_framingham <- function(framingham) {
 
 test_normality_of_groups <- function(data, group_var, var) {
   # Normal distribution in each group
-  unique_groups <- unique(data[[group_var]])
+  unique_groups <- sort(unique(data[[group_var]]))
 
   # Normal distribution
   par(mfrow = c(1, length(unique_groups)))
@@ -46,7 +46,7 @@ test_normality_of_groups <- function(data, group_var, var) {
     # Create histogram
     hist(group_data,
       probability = TRUE,
-      main = paste("Histogram for", group_var, group),
+      main = paste("Histogramm für", group_var, group),
       xlab = var,
       col = "gray", border = "black",
       ylim = c(0, 0.15)
@@ -67,13 +67,6 @@ test_normality_of_groups <- function(data, group_var, var) {
 
 ########################################################################################
 # Helper functions for the exercises
-########################################################################################
-
-
-########################################################################################
-# Visualisations
-########################################################################################
-
 ########################################################################################
 
 # Function to remove outliers

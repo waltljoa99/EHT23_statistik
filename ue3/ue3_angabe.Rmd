@@ -44,12 +44,12 @@ if (!checkIDEisRStudio()) {
 
 # Check whether package is already installed, if not install it
 load <- function(package_name) {
-  if (!(package_name %in% installed.packages())) {
+  if (length(find.package(package_name, quiet = TRUE)) == 0) {
     # Set the CRAN mirror
     options(repos = c(CRAN = "https://cran.wu.ac.at/"))
     install.packages(package_name)
   }
-  library(package_name, character.only = TRUE)
+  suppressWarnings(library(package_name, character.only = TRUE))
 }
 
 # Load packages
@@ -64,6 +64,9 @@ load("ggplot2")
 load("stats")
 load("ROCit")
 load("ggpubr")
+load("nparLD")
+load("rcompanion")
+load("FSA")
 
 
 
@@ -326,17 +329,30 @@ leveneTest(bmi ~ educ, data = framingham)
 bartlett.test(bmi ~ educ, data = framingham)
 ```
 
+Die Histogramme der BMI-Werte für die verschiedenen Bildungsstufen zeigen, dass die Verteilung der BMI-Werte für jede Bildungsstufe nicht normal ist.
+Der Shapiro-Wilk-Test bestätigt diese Annahme, da die p-Werte für alle Bildungsstufen kleiner als 0,05 sind.
+Außerdem zeigt der Levene Test, dass die Varianz aller Gruppen nicht gleich ist.
+Daher sind die Voraussetzunge einer ANOVA verletzt. Allerdings reagiert der F-Test auf Abweichungen nicht so empfindlich, wenn
+1) die Gruppengrößen etwa gleich sind
+2) und die Gruppen hinreichend groß sind.
+
+```{r}
+table(framingham$educ)
+```
+
+Da Bedinung 1 nicht erfüllt ist, muss von einer ANOVA abgesehen werden. Stattdessen wird ein Kruskal Wallis Test angewandt.
+
 i) Verwenden Sie eine geeignete grafische Darstellung der Daten / Ergebnisse.
 
 ```{r}
 # Open a new graphics device
-dev.new()
+# dev.new()
 
 # Boxplot (education levels)
-boxplot(framingham$bmi ~ framingham$educ,
-        main = "BMI in Abhängigkeit des Bildungsgrad",
-        xlab = "Bildungsgrad",
-        ylab = "BMI in kg/m^2")
+# boxplot(framingham$bmi ~ framingham$educ,
+#         main = "BMI in Abhängigkeit des Bildungsgrad",
+#         xlab = "Bildungsgrad",
+#         ylab = "BMI in kg/m^2")
 
 ```
 ```{r}
@@ -361,17 +377,70 @@ ggplot(framingham_clean, aes(x = educ, y = bmi)) +
   labs(title = "BMI in Abhängigkeit des Bildungsgrades",
        x = "Bildungsgrad",
        y = "BMI in kg/m^2")
-
-
 ```
+Die Boxplots legen die Vermutung nahe, dass der der Unterschieder zwischen Gruppe "Bildungsgrad 1" und den anderen Gruppen signfikant ist.
+
 
 i) Gibt es signifikante Unterschiede zwischen den Bildungsstufen, wenn ja zwischen welchen Stufen?
 
 
 ```{r}
-# ANOVA
-aov_result <- aov(bmi ~ educ, data = framingham)
-summary(aov_result)
+# RESULTS NOT VALID! REQUIREMENTS NOT MET!
+
+# # ANOVA
+# aov_result <- aov(bmi ~ educ, data = framingham)
+# summary(aov_result)
+
+# # Show results
+# library(ggplot2)
+# ggplot(framingham, aes(x = educ, y = bmi)) +
+#   geom_boxplot() +
+#   labs(title = "BMI in Abhängigkeit des Bildungsgrades",
+#        x = "Bildungsgrad",
+#        y = "BMI in kg/m^2")
+```
+
+```{r}
+# RESULTS NOT VALID! REQUIREMENTS NOT MET!
+
+# # Post hoc analysis
+# pht <- TukeyHSD(aov_result)
+# print(pht)
+
+# # Show results
+# library(ggpubr)
+
+# stat.test <- tibble::tribble(
+#   ~group1, ~group2,   ~p.adj,
+#   "1",     "2", round(pht$educ[1,4],6),
+#   "1",     "3", round(pht$educ[2,4],6),
+#   "1",     "4", round(pht$educ[3,4],6),
+#   "2",     "3", round(pht$educ[4,4],6),
+#   "2",     "4", round(pht$educ[5,4],6),
+#   "3",     "4", round(pht$educ[6,4],6))
+
+# # Determine the maximum value of the 'bmi' column
+# max_bmi <- max(framingham$bmi, na.rm = TRUE)
+
+# # Create an array of y positions starting from the maximum BMI value and incrementing by a small amount
+# y_positions <- max_bmi + seq(from = 1, to = 6, by = 1)
+
+# # Create boxplot
+# ggboxplot(framingham, x = "educ", y = "bmi",
+#           color = "educ", 
+#           palette = "jco") +
+#   stat_pvalue_manual(stat.test,
+#                      y.position = y_positions, 
+#                      step.increase = 0.2,
+#                      label = "p.adj")
+```
+
+```{r}
+# Kruskal Wallis Test
+# Non parametric test instead of one way ANOVA
+
+kwt_result <- kruskal.test(bmi ~ educ, data = framingham)
+kwt_result
 
 # Show results
 library(ggplot2)
@@ -382,22 +451,27 @@ ggplot(framingham, aes(x = educ, y = bmi)) +
        y = "BMI in kg/m^2")
 
 ```
+
+Da der p-Wert kleiner als 0.05 ist, kann angenommen werden, dass es einen signifikanten Unterschied zwischen den Bildungsstufen gibt.
 ```{r}
-# Post hoc analysis
-pht <- TukeyHSD(aov_result)
-print(pht)
+# Post hoc test
 
-# Show results
-library(ggpubr)
+# Perform pairwise Wilcoxon test
+pwt_result <- pairwise.wilcox.test(framingham$bmi, framingham$educ, p.adjust.method = "BH")
 
+# Extract p-values
+p_values <- pwt_result$p.value
+print(p_values)
+
+# Create data frame for manual p-value annotation
 stat.test <- tibble::tribble(
   ~group1, ~group2,   ~p.adj,
-  "1",     "2", round(pht$educ[1,4],6),
-  "1",     "3", round(pht$educ[2,4],6),
-  "1",     "4", round(pht$educ[3,4],6),
-  "2",     "3", round(pht$educ[4,4],6),
-  "2",     "4", round(pht$educ[5,4],6),
-  "3",     "4", round(pht$educ[6,4],6))
+  "1",     "2", round(p_values[1],6),
+  "1",     "3", round(p_values[2],6),
+  "1",     "4", round(p_values[3],6),
+  "2",     "3", round(p_values[5],6),
+  "2",     "4", round(p_values[6],6),
+  "3",     "4", round(p_values[9],6))
 
 # Determine the maximum value of the 'bmi' column
 max_bmi <- max(framingham$bmi, na.rm = TRUE)
@@ -414,6 +488,13 @@ ggboxplot(framingham, x = "educ", y = "bmi",
                      step.increase = 0.2,
                      label = "p.adj")
 ```
+
+Der Wilcoxon Test liefert beim Faktor "Bildunsgrad" für die Vergleichspaare (1,2), (1,3) und (1,4) einen hochsignifikanten p-Wert kleiner 0.01.
+D.h. der BMI der Gruppe mit Bildungsgrad 1 utnerscheidet sich signifikant von den anderen Bildungsgraden,
+während der Unterschied zwischen den anderen Bildungsgraden (2,3), (2,4), (3,4) nicht signifikant ist.
+Nimmt man an, dass die Gruppen aus Populationen mit annähernd derselben Verteilung entstammen, impliziert dies,
+dass der Median der Gruppe mit Bildungsgrad 1 signifikant höher als der Median der anderen Gruppen ist.
+
 
 i) Achten Sie auf eine "statistisch korrekte" Formulierung des Ergebnisses.
 
@@ -681,6 +762,23 @@ leveneTest(sysbp ~ educ * sex, data = framingham)
 bartlett.test(sysbp ~ educ, data = framingham)
 bartlett.test(sysbp ~ sex, data = framingham)
 ```
+
+Die Histogramme der Blutdruck-Werte für die verschiedenen Bildungsstufen zeigen, dass die Verteilung der Blutdruck-Werte für jede Bildungsstufe nicht normal ist.
+Der Shapiro-Wilk-Test bestätigt diese Annahme, da die p-Werte für alle Bildungsstufen kleiner als 0,05 sind.
+Außerdem zeigt der Levene Test, dass die Varianz aller Gruppen nicht gleich ist. Dasselbe gilt für die Gruppen nach Geschlecht.
+Daher sind die Voraussetzunge einer ANOVA verletzt. Allerdings reagiert der F-Test auf Abweichungen nicht so empfindlich, wenn
+1) die Gruppengrößen etwa gleich sind
+2) und die Gruppen hinreichend groß sind.
+
+```{r}
+table(framingham$educ)
+table(framingham$sex)
+```
+
+Da Bedingung 1 nicht erfüllist, kommt keine zweifaktorielle ANOVA infrage.
+Stattdessen wird für jeden Faktor ein Kruskal Wallis Test angewandt.
+Für die Unterscuhung des Einflusses der Kombination von Geschlecht und Bildungsgrad wird ein Scheirer-Ray-Hare-Test durchgeführt.
+
 i) Verwenden Sie eine geeignete grafische Darstellung der Daten / Ergebnisse.
 
 ```{r}
@@ -725,6 +823,8 @@ ggplot(framingham_clean, aes(x = educ, y = sysbp, fill = sex)) +
 
 
 ```
+Die visuelle Analyse legt die Vermutung nahe, dass Geschlecht und Bildungsgrad wechselwirken,
+da die gedachten Verläufe durch die Mediane für Männer- und Frauengruppen sich zu überschneiden scheinen.
 
 i) Gibt es signifikante Haupteffekte sowie Interaktionseffekte (inkl. Interaktions-Plot)?
 
@@ -745,34 +845,93 @@ ip_sex <- interaction.plot(framingham$sex, framingham$educ, framingham$sysbp,
 # Interaction plots (ggpubr)
 ggline(framingham, x = "educ", y = "sysbp", color = "sex", size = 1.1,
        add = c("mean_se","dotplot"))
-ggline(weightloss, x = "sex", y = "sysbp", color = "educ", size = 1.1,
+ggline(framingham, x = "sex", y = "sysbp", color = "educ", size = 1.1,
        add = c("mean_se","dotplot"))
 ```
 
+Die Interaktionsplots zeigen, dass die Wechselwirkung disordinal ist, da es in beiden Plots (x-Achse: Bildungsgrad bzw. Geschlecht) Überschneidungen in den Verläufen durch die Gruppenmittelwerte gibt.
 
 ```{r}
-# Post hoc tests
-pht_educ <- TukeyHSD(aov(sysbp~educ*sex,data=framingham),which="educ")
-pht_sex <- TukeyHSD(aov(sysbp~educ*sex,data=framingham),which="sex")
+# RESULTS NOT VALID! REQUIREMENTS NOT MET!
+
+# # Post hoc tests
+# pht_educ <- TukeyHSD(aov(sysbp~educ*sex,data=framingham),which="educ")
+# pht_sex <- TukeyHSD(aov(sysbp~educ*sex,data=framingham),which="sex")
+```
+
+
+```{r}
+# RESULTS NOT VALID! REQUIREMENTS NOT MET!
+
+# # Show the post hoc test results
+# stat.test_educ <- tibble::tribble(
+#   ~group1, ~group2,   ~p.adj,
+#   "1",     "2", round(pht$educ[1,4],6),
+#   "1",     "3", round(pht$educ[2,4],6),
+#   "1",     "4", round(pht$educ[3,4],6),
+#   "2",     "3", round(pht$educ[4,4],6),
+#   "2",     "4", round(pht$educ[5,4],6),
+#   "3",     "4", round(pht$educ[6,4],6))
+
+# # Determine the maximum value of the 'bmi' column
+# max_sysbp <- max(framingham$sysbp, na.rm = TRUE)
+
+# # Create an array of y positions starting from the maximum BMI value and incrementing by a small amount
+# y_positions <- max_sysbp + seq(from = 1, to = 6, by = 1)
+
+# # Boxplot 
+# ggboxplot(framingham, x = "educ", y = "sysbp",
+#           fill = "educ", 
+#           palette = "Okabe-Ito",
+#           ylab = "Sys. Blutdruck in mmHg") +
+#   stat_pvalue_manual(stat.test_educ,
+#                      y.position = y_positions,
+#                      step.increase = 0.2,
+#                      label = "p.adj")
+
+# stat.test_sex <- tibble::tribble(
+#   ~group1, ~group2,   ~p.adj,
+#   "1",     "2", round(pht_sex$sex[1,4],6))
+
+
+# # Boxplot
+# ggboxplot(framingham, x = "sex", y = "sysbp",
+#           fill = "sex", 
+#           palette = "Okabe-Ito",
+#           ylab = "Sys. Blutdruck in mmHg") +
+#   stat_pvalue_manual(stat.test_sex,
+#                      y.position = max_sysbp,
+#                      label = "p.adj")
+
 ```
 
 ```{r}
-# TO DO:
+# Perform Kruskal-Wallis test for educ
+kruskal_educ <- kruskal.test(sysbp ~ educ, data = framingham)
+kruskal_educ
 
-# Darsellung der Post-hoc Test Ergebnisse
+# Post hoc tests
+
+# Perform pairwise Wilcoxon tests
+wilcox_educ <- pairwise.wilcox.test(framingham$sysbp, framingham$educ, p.adjust.method = "BH")
+
+# Extract p-values
+p_values_educ <- wilcox_educ$p.value
+
+# Create data frames for manual p-value annotation
 stat.test_educ <- tibble::tribble(
   ~group1, ~group2,   ~p.adj,
-  "1",     "2", round(pht$educ[1,4],6),
-  "1",     "3", round(pht$educ[2,4],6),
-  "1",     "4", round(pht$educ[3,4],6),
-  "2",     "3", round(pht$educ[4,4],6),
-  "2",     "4", round(pht$educ[5,4],6),
-  "3",     "4", round(pht$educ[6,4],6))
+  "1",     "2", round(p_values_educ[1],6),
+  "1",     "3", round(p_values_educ[2],6),
+  "1",     "4", round(p_values_educ[3],6),
+  "2",     "3", round(p_values_educ[5],6),
+  "2",     "4", round(p_values_educ[6],6),
+  "3",     "4", round(p_values_educ[9],6))
 
-# Determine the maximum value of the 'bmi' column
+# Determine the maximum value of the 'sysbp' column
 max_sysbp <- max(framingham$sysbp, na.rm = TRUE)
 
-# Create an array of y positions starting from the maximum BMI value and incrementing by a small amount
+# Create an array of y positions starting from the maximum sysbp value and incrementing by a small amount
 y_positions <- max_sysbp + seq(from = 1, to = 6, by = 1)
 
 # Boxplot 
@@ -784,11 +943,33 @@ ggboxplot(framingham, x = "educ", y = "sysbp",
                      y.position = y_positions,
                      step.increase = 0.2,
                      label = "p.adj")
+```
 
+Der Kruskal Wallis Test zeigt, dass ein signfikanter Unterschied im BMI zwischen den Gruppen mit unterschiedlichem Bildungsgrad (1 bis 4) besteht (p Wert < 0.05).
+
+Der Wilcoxon Test liefert beim Faktor "Bildunsgrad" (1 bis 4) für die Vergleichspaare (1,2), (1,3), (1,4) und (2,3) einen signifikanten p-Wert kleiner 0.05.
+Nimmt man an, dass die Gruppen aus Populationen mit annähernd derselben Verteilung entstammen, impliziert dies,
+dass der Median der Gruppe mit Bildungsgrad 1 signifikant höher als der Median der anderen Gruppen ist,
+und dass der Median der Gruppe mit Bildungsgrad 2 signifikant höher als der Median der Gruppen 4 ist.
+
+
+```{r}
+# Perform Kruskal-Wallis test for sex
+kruskal_sex <- kruskal.test(sysbp ~ sex, data = framingham)
+kruskal_sex
+
+# Post hoc tests
+
+# Perform pairwise Wilcoxon tests
+wilcox_sex <- pairwise.wilcox.test(framingham$sysbp, framingham$sex, p.adjust.method = "BH")
+
+# Extract p-values
+p_values_sex <- wilcox_sex$p.value
+
+# Create data frames for manual p-value annotation
 stat.test_sex <- tibble::tribble(
   ~group1, ~group2,   ~p.adj,
-  "1",     "2", round(pht_sex$sex[1,4],6))
-
+  "1",     "2", round(p_values_sex[1],6))
 
 # Boxplot
 ggboxplot(framingham, x = "sex", y = "sysbp",
@@ -798,6 +979,23 @@ ggboxplot(framingham, x = "sex", y = "sysbp",
   stat_pvalue_manual(stat.test_sex,
                      y.position = max_sysbp,
                      label = "p.adj")
-
 ```
+
+Der Kruskal Wallis Test zeigt keinen signifikanten Unterschied im Blutdruck zwischen Geschlecht Mann und Frau (p Wert > 0.05).
+Der anschließende Wilcoxon Test bestätigt das Ergebnis.
+
+```{r}
+# Perform the Scheirer-Ray-Hare test to account for interactions
+result <- scheirerRayHare(sysbp ~ educ + sex, data = framingham)
+
+# Print the results
+print(result)
+```
+
+Der Scheirer-Ray-Hare-Test liefert einen signifikanten p-Wert (<0.05) für die Wechselwirkung zwischen Bildungsgrad und Geschlecht.
+Dieses Ergebnis steht mit der Wechselwirkung, die im Interaktionsplot visuell dargestellt wurde, im Einklang.
+Außerdem sind die p-Werte für die Haupteffekte (p-Wert für Bildungsgrad < 0.01, für Geschlecht: 0.163) des SRH Tests
+kompatibel mit den p-Werten der Kruskal Wallis Tests der einzelnen Faktoren (p-Wert für Bildungsgrad < 0.01, für Geschlecht = 0.188). 
+
+
 i) Achten Sie auf eine "statistisch korrekte" Formulierung des Ergebnisses.
