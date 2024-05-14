@@ -1285,7 +1285,7 @@ ggplot(data_sus, aes(x = Country, y = Score, fill = Group)) +
     "text",
     x = Inf,
     y = Inf,
-    label = "Gepunktete Linie <- Mittelwert",
+    label = "Gestrichelte Linie <– Mittelwert",
     hjust = 1,
     vjust = 1
   ) +
@@ -1324,7 +1324,7 @@ ggplot(data_sus_clean, aes(x = Country, y = Score, fill = Group)) +
     "text",
     x = Inf,
     y = Inf,
-    label = "Gepunktete Linie <- Mittelwert",
+    label = "Gestrichelte Linie <– Mittelwert",
     hjust = 1,
     vjust = 1
   ) +
@@ -1337,7 +1337,7 @@ ggplot(data_sus_clean, aes(x = Country, y = Score, fill = Group)) +
   ylim(min(data_sus$Score), max(data_sus$Score))
 ```
 
-Die von Ausreißern bereinigten Boxplots zeigen, variierende Verhältnisse zwischen Kontroll- und Interventionsgruppe in den Ländern.
+Die von Ausreißern bereinigten Boxplots zeigen variierende Verhältnisse zwischen Kontroll- und Interventionsgruppe in den Ländern.
 Für Östereich und Italien fällt der Median der Kontrollgruppe höher aus als der der Interventionsgruppe.
 Für Finnland fällt der Median der Interventionsgruppe höher aus als der der Kontrollgruppe.
 Für Schweden gibt es nur einen minimalen Unterschied zwischen den Medianen der Kontroll- und Interventionsgruppe.
@@ -1345,11 +1345,11 @@ Für Schweden gibt es nur einen minimalen Unterschied zwischen den Medianen der 
 ```{r}
 # load_source()
 
-# # -- For education levels
+# # -- For group levels
 
 # test_normality_of_groups(data_sus,"Group", "Score")
 
-# # -- For sex
+# # -- For country levels
 
 # test_normality_of_groups(data_sus,"Country","Score")
 
@@ -1392,3 +1392,170 @@ ggline(data_sus, x = "Group", y = "Score", color = "Country", size = 1.1,
 Die Interaktionsplots zeigen für die Ausreißer bereinigten Daten, dass die Wechselwirkung semidisordinal ist.
 Beim Ländervergleich auf der x-Achse überschneiden sich die Verläufe für Kontroll- und Interventionsgruppe.
 Beim Gruppenvergleich auf der x-Achse gibt es keine Überschneidungen, aber negative wie positive Steigungen der Verdünnungslinien.
+
+# Ab hier ignorieren
+# -------------------------
+
+
+Vergleich: Für Gesamt Kontroll vs Intervention
+```{r}
+# Perform Kruskal-Wallis test for educ
+kruskal_group <- kruskal.test(Score ~ Group, data = data_sus)
+kruskal_group
+
+# Post hoc tests
+
+# Perform pairwise Wilcoxon tests
+wilcox_group <- pairwise.wilcox.test(data_sus$Score, data_sus$Group, p.adjust.method = "BH")
+
+# Extract p-values
+p_values_group <- wilcox_group$p.value
+
+print(p_values_group)
+
+# Convert p-value matrix to a vector
+p_values_group_vec <- as.vector(p_values_group)
+
+# Remove NA values (these are for comparisons with themselves)
+p_values_group <- p_values_group_vec[!is.na(p_values_group_vec)]
+
+# Create data frames for manual p-value annotation
+stat.test_group <- tibble::tribble(
+  ~group1, ~group2,   ~p.adj,
+  "Control",     "Intervention", round(p_values_group[1],6)
+)
+
+stat.test_group
+
+# Determine the maximum value of the 'Score' column
+max_score <- max(data_susa$Score, na.rm = TRUE)
+
+# Create an array of y positions starting from the maximum Score value and incrementing by a small amount
+y_positions <- max_score + seq(from = 1, to = 1, by = 1)
+
+y_positions
+# Boxplot 
+ggboxplot(data_sus, x = "Group", y = "Score",
+          fill = "Group", 
+          palette = "Okabe-Ito",
+          ylab = "Score (SUS)") +
+  stat_pvalue_manual(stat.test_group,
+                     y.position = y_positions,
+                     step.increase = 0.2,
+                     label = "p.adj")
+```
+
+Vergleich: Für Österreich Kontroll vs. Intervention
+
+```{r}
+# Filter data_sus by Austria
+austria_data <- dplyr::filter(data_sus, Country == "Austria")
+
+# Perform Kruskal-Wallis test for educ
+kruskal_group <- kruskal.test(Score ~ Group, data = austria_data)
+kruskal_group
+
+# Post hoc tests
+
+# Perform pairwise Wilcoxon tests
+wilcox_group <- pairwise.wilcox.test(austria_data$Score, austria_data$Group, p.adjust.method = "BH")
+
+# Extract p-values
+p_values_group <- wilcox_group$p.value
+
+print(p_values_group)
+
+# Convert p-value matrix to a vector
+p_values_group_vec <- as.vector(p_values_group)
+
+# Remove NA values (these are for comparisons with themselves)
+p_values_group <- p_values_group_vec[!is.na(p_values_group_vec)]
+
+# Create data frames for manual p-value annotation
+stat.test_group <- tibble::tribble(
+  ~group1, ~group2,   ~p.adj,
+  "Control",     "Intervention", round(p_values_group[1],6)
+)
+
+stat.test_group
+
+# Determine the maximum value of the 'Score' column
+max_score <- max(austria_data$Score, na.rm = TRUE)
+
+# Create an array of y positions starting from the maximum Score value and incrementing by a small amount
+y_positions <- max_score + seq(from = 1, to = 1, by = 1)
+
+y_positions
+# Boxplot 
+ggboxplot(austria_data, x = "Group", y = "Score",
+          fill = "Group", 
+          palette = "Okabe-Ito",
+          ylab = "Score (SUS)") +
+  stat_pvalue_manual(stat.test_group,
+                     y.position = y_positions,
+                     step.increase = 0.2,
+                     label = "p.adj")
+```
+
+Vergleich: Für alle Länder Kontroll vs Intervention
+
+```{r}
+# Get unique countries
+countries <- unique(data_sus$Country)
+
+# Initialize an empty list to store plots
+plots <- list()
+
+# For each country
+for (country in countries) {
+  # Filter data_sus by country
+  country_data <- dplyr::filter(data_sus, Country == country)
+
+  # Perform Kruskal-Wallis test for educ
+  kruskal_group <- kruskal.test(Score ~ Group, data = country_data)
+
+  # Post hoc tests
+
+  # Perform pairwise Wilcoxon tests
+  wilcox_group <- pairwise.wilcox.test(country_data$Score, country_data$Group, p.adjust.method = "BH")
+
+  # Extract p-values
+  p_values_group <- wilcox_group$p.value
+
+  # Convert p-value matrix to a vector
+  p_values_group_vec <- as.vector(p_values_group)
+
+  # Remove NA values (these are for comparisons with themselves)
+  p_values_group <- p_values_group_vec[!is.na(p_values_group_vec)]
+
+  # Create data frames for manual p-value annotation
+  stat.test_group <- tibble::tribble(
+    ~group1, ~group2,   ~p.adj,
+    "Control",     "Intervention", round(p_values_group[1],6)
+  )
+
+  # Determine the maximum value of the 'Score' column
+  max_score <- max(country_data$Score, na.rm = TRUE)
+
+  # Create an array of y positions starting from the maximum Score value and incrementing by a small amount
+  y_positions <- max_score + seq(from = 1, to = 1, by = 1)
+
+  # Boxplot 
+  plot <- ggboxplot(country_data, x = "Group", y = "Score",
+            fill = "Group", 
+            palette = "Okabe-Ito",
+            ylab = "Score (SUS)") +
+    stat_pvalue_manual(stat.test_group,
+                       y.position = y_positions,
+                       step.increase = 0.2,
+                       label = "p.adj")
+  
+  # Add the plot to the list
+  plots[[country]] <- plot
+}
+
+# Print all plots
+for (country in countries) {
+  print(plots[[country]])
+}
+```
