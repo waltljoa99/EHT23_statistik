@@ -46,7 +46,7 @@ test_normality_of_groups <- function(data, group_var, var) {
     # Create histogram
     hist(group_data,
       probability = TRUE,
-      main = paste("Histogramm für", group_var, group),
+      main = paste(group_var, group),
       xlab = var,
       col = "gray", border = "black",
       ylim = c(0, 0.15)

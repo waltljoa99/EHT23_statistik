@@ -992,3 +992,403 @@ Außerdem sind die p-Werte für die Haupteffekte (p-Wert für Bildungsgrad < 0.0
 kompatibel mit den p-Werten der Kruskal Wallis Tests der einzelnen Faktoren (p-Wert für Bildungsgrad < 0.01, für Geschlecht = 0.188). 
 
 
+
+
+# [Bonus]
+
+Analysieren Sie die erhobenen Daten bezüglich der Usability der LETHE App in der Kontroll- und
+Interventionsgruppe. Betrachten Sie Kontroll- und Interventionsgruppe getrennt voneinander. Verwenden Sie
+dazu die zur Verfügung gestellten .csv Dateien, wobei die Spalte „Score“ den SUS darstellt. Untersuchen Sie,
+ob das jeweilige Land einen Einfluss auf die Usability der LETHE App hat. Verwenden Sie eine geeignete
+grafische Darstellung der Daten und statistische Verfahren. Gibt es signifikante Unterschiede zwischen den
+Ländern, wenn ja, zwischen welchen Ländern? Formulieren Sie die Ergebnisse „statistisch korrekt“.
+
+
+
+```{r}
+# Read in data
+
+read_files <- function(directory) {
+  # Get a list of all CSV files in the directory
+  file_list <- list.files(directory, pattern = "*.csv", full.names = TRUE)
+  
+  # Initialize an empty data frame to store the results
+  result <- data.frame()
+  
+  # Loop over the files
+  for (file in file_list) {
+    # Read the file into a data frame
+    data <- read.csv(file)
+    
+    # Extract the group and country from the file name
+    file_info <- strsplit(basename(file), "_")[[1]]
+    group <- file_info[1]
+    country <- file_info[3]
+    
+    # Keep only the 'Score' column and add the 'Group' and 'Country' columns
+    data <- data.frame(Score = data$Score, Group = group, Country = country)
+    
+    # Append the data frame to the result
+    result <- rbind(result, data)
+  }
+  
+  return(result)
+}
+
+# Use the function to read the files from a directory
+data_sus <- read_files("ue3_Bonus_LETHE_SUS/LETHE_SUS_data")
+
+# Convert 'Group' and 'Country' to factors
+data_sus$Group <- factor(data_sus$Group)
+data_sus$Country <- factor(data_sus$Country)
+
+# Print the updated data frame
+data_sus
+```
+
+Alle .csv Dateien wwerden eingelesen. Das Dataframe enthält 3 Spalten "Score", "Group" und "Country". Die Spalten "Group" und "Country" werden in Faktoren umgewandelt.
+
+```{r}
+# Select subset of data by group type
+
+# Subset the data for the Intervention group
+intervention_data <- subset(data_sus, Group == "Intervention")
+
+# Subset the data for the Control group
+control_data <- subset(data_sus, Group == "Control")
+```
+
+Für die getrennte Analyse von Kontroll- und Interventionsgruppe werden die Daten entsprechend unterteilt.
+
+```{r}
+# Analyze Control Group
+
+# -- For Whole Control Group
+
+test_normality_of_groups(control_data,"Group", "Score")
+
+# -- For Subgroup Countries in Control Group
+
+test_normality_of_groups(control_data,"Country","Score")
+
+# Variance inhomogeneity (Heteroscedasticity)
+
+# Levene test
+leveneTest(Score ~ Country, data = control_data)
+
+# Bartlett test
+bartlett.test(Score ~ Country, data = control_data)
+```
+
+Für die gesamte Kontrollgruppe gilt, dass die Normalverteilung der Scores nicht gegeben ist.
+Dies wird durch den Shapiro-Wilk-Test bestätigt (p<0.05).
+Ebenso liegt für die Subgruppen Östereich und Finnland keine Normalverteilung vor (p<0.05).
+Die Varianz der Scores Über die Ländergruppen ist homogen, wie der Levene- und Bartlett-Test zeigen (p>0.05).
+Da die Normalverteilung der Scores aller Ländergruppen nicht gegeben, ist eine Voraussetzung für die ANOVA verletzt.
+
+```{r}
+table(control_data$Country)
+```
+Zu wenige Daten bedeuten, dass eine ANOVA endgültig unzulässig ist. Es wird ein Kruskal Wallis Test angewandt.
+
+```{r}
+# Perform Kruskal-Wallis test for educ
+kruskal_country <- kruskal.test(Score ~ Country, data = control_data)
+kruskal_country
+
+# Post hoc tests
+
+# Perform pairwise Wilcoxon tests
+wilcox_country <- pairwise.wilcox.test(control_data$Score, control_data$Country, p.adjust.method = "BH")
+
+
+# Extract p-values
+p_values_country <- wilcox_country$p.value
+
+print(p_values_country)
+
+# Convert p-value matrix to a vector
+p_values_country_vec <- as.vector(p_values_country)
+
+# Remove NA values (these are for comparisons with themselves)
+p_values_country <- p_values_country_vec[!is.na(p_values_country_vec)]
+
+# Create data frames for manual p-value annotation
+stat.test_country <- tibble::tribble(
+  ~group1, ~group2,   ~p.adj,
+  "Austria",     "Finland", round(p_values_country[1],6),
+  "Austria",     "Italy", round(p_values_country[2],6),
+  "Austria",     "Sweden", round(p_values_country[3],6),
+  "Finland",     "Italy", round(p_values_country[4],6),
+  "Finland",     "Sweden", round(p_values_country[5],6),
+  "Italy",     "Sweden", round(p_values_country[6],6))
+
+p_values_country[8]
+
+stat.test_country
+
+# Determine the maximum value of the 'sysbp' column
+max_score <- max(control_data$Score, na.rm = TRUE)
+
+# Create an array of y positions starting from the maximum sysbp value and incrementing by a small amount
+y_positions <- max_score + seq(from = 1, to = 6, by = 1)
+
+y_positions
+# Boxplot 
+ggboxplot(control_data, x = "Country", y = "Score",
+          fill = "Country", 
+          palette = "Okabe-Ito",
+          ylab = "Score (SUS)") +
+  stat_pvalue_manual(stat.test_country,
+                     y.position = y_positions,
+                     step.increase = 0.2,
+                     label = "p.adj")
+```
+Der Kruskal Wallis Test zeigt, dass es einen signifikanten Unterschied in der Usability der LETHE App zwischen den Ländern bei der Kontrollgruppe gibt (p<0.05).
+
+Die Post hoc Analyse besagt, dass es innerhalb der Kontrollgruppe zwischen den Länder-Subgruppen keine signfikaten Unterschiede gibt
+außer zwischen Österreich und Schweden (p<0.05). Dise bedeutet, dass sich die Verteilung des SUS Scores
+zwischen den Ländern bei der Kontrollgruppe nicht signifikant unterscheidet außer zwischen Östereich und Schweden.
+
+```{r}
+# # Get the length of the p_values_country vector
+# n <- length(p_values_country)
+
+# # Loop over the indices from 1 to n
+# for (i in 1:n) {
+#   # Print the index and the corresponding p-value
+#   print(paste("Index:", i, "P-value:", round(p_values_country[i], 6)))
+# }
+```
+
+
+```{r}
+# Analyze Intervention Group
+
+# -- For Whole Intervention Group
+
+test_normality_of_groups(intervention_data,"Group", "Score")
+
+# -- For Subgroup Countries in Intervention Group
+
+test_normality_of_groups(intervention_data,"Country","Score")
+
+# Variance inhomogeneity (Heteroscedasticity)
+
+# Levene test
+leveneTest(Score ~ Country, data = intervention_data)
+
+# Bartlett test
+bartlett.test(Score ~ Country, data = intervention_data)
+```
+
+Für die gesamte Interventionsgruppe gilt, dass die Normalverteilung der Scores nicht gegeben ist.
+Dies wird durch den Shapiro-Wilk-Test bestätigt (p<0.05).
+Ebenso liegt für die Subgruppe Östereich keine Normalverteilung vor (p<0.05).
+Die Varianz der Scores Über die Ländergruppen ist homogen, wie der Levene- und Bartlett-Test zeigen (p>0.05).
+Da die Normalverteilung der Scores aller Ländergruppen nicht gegeben, ist eine Voraussetzung für die ANOVA verletzt.
+
+```{r}
+table(intervention_data$Country)
+```
+Zu wenige Daten bedeuten, dass eine ANOVA endgültig unzulässig ist. Es wird ein Kruskal Wallis Test angewandt.
+
+```{r}
+# Perform Kruskal-Wallis test for educ
+kruskal_country <- kruskal.test(Score ~ Country, data = intervention_data)
+kruskal_country
+
+# Post hoc tests
+
+# Perform pairwise Wilcoxon tests
+wilcox_country <- pairwise.wilcox.test(intervention_data$Score, intervention_data$Country, p.adjust.method = "BH")
+
+
+# Extract p-values
+p_values_country <- wilcox_country$p.value
+
+print(p_values_country)
+
+# Convert p-value matrix to a vector
+p_values_country_vec <- as.vector(p_values_country)
+
+# Remove NA values (these are for comparisons with themselves)
+p_values_country <- p_values_country_vec[!is.na(p_values_country_vec)]
+
+# Create data frames for manual p-value annotation
+stat.test_country <- tibble::tribble(
+  ~group1, ~group2,   ~p.adj,
+  "Austria",     "Finland", round(p_values_country[1],6),
+  "Austria",     "Italy", round(p_values_country[2],6),
+  "Austria",     "Sweden", round(p_values_country[3],6),
+  "Finland",     "Italy", round(p_values_country[4],6),
+  "Finland",     "Sweden", round(p_values_country[5],6),
+  "Italy",     "Sweden", round(p_values_country[6],6))
+
+p_values_country[8]
+
+stat.test_country
+
+# Determine the maximum value of the 'sysbp' column
+max_score <- max(intervention_data$Score, na.rm = TRUE)
+
+# Create an array of y positions starting from the maximum sysbp value and incrementing by a small amount
+y_positions <- max_score + seq(from = 1, to = 6, by = 1)
+
+y_positions
+# Boxplot 
+ggboxplot(intervention_data, x = "Country", y = "Score",
+          fill = "Country", 
+          palette = "Okabe-Ito",
+          ylab = "Score (SUS)") +
+  stat_pvalue_manual(stat.test_country,
+                     y.position = y_positions,
+                     step.increase = 0.2,
+                     label = "p.adj")
+```
+
+Der Kruskal Wallis Test zeigt, dass es KEINEN signifikanten Unterschied in der Usability der LETHE App zwischen den Ländern bei der Interventionsgruppe gibt (p<0.05).
+
+Die Post hoc Analyse bestätigt, dass es innerhalb der Interventionsgruppe zwischen den Länder-Subgruppen keine signfikaten Unterschiede gibt (p<0.05).
+Dise bedeutet, dass sich die Verteilung des SUS Scores zwischen den Ländern bei der Interventionsgruppe nicht signifikant unterscheidet.
+
+```{r}
+# Create Boxplots for Control Group vs. Intervention Group
+
+# Boxplot country levels
+ggplot(data_sus, aes(x = Country, y = Score)) +
+  geom_boxplot() +
+  labs(title = "SUS in Abhängigkeit des Landes",
+       x = "Land",
+       y = "Score (SUS)")
+
+# Boxplot group levels
+ggplot(data_sus, aes(x = Group, y = Score)) +
+  geom_boxplot() +
+  labs(title = "SUS in Abhängigkeit der Gruppe",
+       x = "Gruppe",
+       y = "Score (SUS)")
+
+# Boxplot country and group levels with mean lines
+ggplot(data_sus, aes(x = Country, y = Score, fill = Group)) +
+  geom_boxplot(position = position_dodge(0.9)) +
+  stat_summary(
+    fun = mean,
+    geom = "crossbar",
+    width = 0.7,
+    position = position_dodge(0.9),
+    color = "red",
+    size = 0.5,
+    linetype = "11"
+    ) +
+  annotate(
+    "text",
+    x = Inf,
+    y = Inf,
+    label = "Gepunktete Linie <- Mittelwert",
+    hjust = 1,
+    vjust = 1
+  ) +
+  labs(
+    title = "SUS in Abhängigkeit des Landes und der Gruppe",
+    x = "Land",
+    y = "Score (SUS)",
+    fill = "Gruppe"
+  ) +
+  ylim(min(data_sus$Score), max(data_sus$Score))
+```
+
+```{r}
+# Remove outliers (median +- 1.5 IQR)
+library(dplyr)
+data_sus_clean <- data_sus %>%
+  group_by(Country, Group) %>%
+  mutate(lb = quantile(Score, 0.25) - 1.5 * IQR(Score),
+         ub = quantile(Score, 0.75) + 1.5 * IQR(Score)) %>%
+  filter(Score >= lb & Score <= ub)
+
+
+# Boxplot country and group levels with mean lines
+ggplot(data_sus_clean, aes(x = Country, y = Score, fill = Group)) +
+  geom_boxplot(position = position_dodge(0.9)) +
+  stat_summary(
+    fun = mean,
+    geom = "crossbar",
+    width = 0.7,
+    position = position_dodge(0.9),
+    color = "red",
+    size = 0.5,
+    linetype = "11"
+    ) +
+  annotate(
+    "text",
+    x = Inf,
+    y = Inf,
+    label = "Gepunktete Linie <- Mittelwert",
+    hjust = 1,
+    vjust = 1
+  ) +
+  labs(
+    title = "SUS in Abhängigkeit des Landes und der Gruppe",
+    x = "Land",
+    y = "Score (SUS)",
+    fill = "Gruppe"
+  ) +
+  ylim(min(data_sus$Score), max(data_sus$Score))
+```
+
+Die von Ausreißern bereinigten Boxplots zeigen, variierende Verhältnisse zwischen Kontroll- und Interventionsgruppe in den Ländern.
+Für Östereich und Italien fällt der Median der Kontrollgruppe höher aus als der der Interventionsgruppe.
+Für Finnland fällt der Median der Interventionsgruppe höher aus als der der Kontrollgruppe.
+Für Schweden gibt es nur einen minimalen Unterschied zwischen den Medianen der Kontroll- und Interventionsgruppe.
+
+```{r}
+# load_source()
+
+# # -- For education levels
+
+# test_normality_of_groups(data_sus,"Group", "Score")
+
+# # -- For sex
+
+# test_normality_of_groups(data_sus,"Country","Score")
+
+# # Variance inhomogeneity (Heteroscedasticity)
+
+# # Levene test
+# leveneTest(Score ~ Group, data = data_sus)
+# leveneTest(Score ~ Country, data = data_sus)
+# leveneTest(Score ~ Group * Country, data = data_sus)
+
+# # Bartlett test
+# bartlett.test(Score ~ Group, data = data_sus)
+# bartlett.test(Score ~ Country, data = data_sus)
+```
+
+```{r}
+data_sus <- data_sus_clean
+
+# Interaction plots (simple)
+ip_educ <- interaction.plot(data_sus$Country, data_sus$Group, data_sus$Score, 
+                 col = c("darkorange", "darkgreen", "blue"),
+                 pch = c(1, 2, 3), fixed = FALSE, xlab = "Country", 
+                 ylab = "Score (SUS)", trace.label = "Group")
+
+ip_sex <- interaction.plot(data_sus$Group, data_sus$Country, data_sus$Score, 
+                 col = c("darkorange", "darkgreen", "blue"),
+                 pch = c(1, 2, 3), fixed = FALSE, xlab = "Group", 
+                 ylab = "Score (SUS)", trace.label = "Country")
+
+```
+
+```{r,message=FALSE}
+# Interaction plots (ggpubr)
+ggline(data_sus, x = "Country", y = "Score", color = "Group", size = 1.1,
+       add = c("mean_se","dotplot"))
+ggline(data_sus, x = "Group", y = "Score", color = "Country", size = 1.1,
+       add = c("mean_se","dotplot"))
+```
+
+Die Interaktionsplots zeigen für die Ausreißer bereinigten Daten, dass die Wechselwirkung semidisordinal ist.
+Beim Ländervergleich auf der x-Achse überschneiden sich die Verläufe für Kontroll- und Interventionsgruppe.
+Beim Gruppenvergleich auf der x-Achse gibt es keine Überschneidungen, aber negative wie positive Steigungen der Verdünnungslinien.
