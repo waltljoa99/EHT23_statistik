@@ -10,6 +10,85 @@ output:
   word_document: default
 ---
 
+```{r setup, include=FALSE}
+## Run this chunk ALWAYS first !
+# Arbeitsverzeichnis für VSC Nutzer korrekt setzen
+# Nötige Packages installieren und laden
+# Helfer Funktionen für alle Nutzer laden
+
+# Set relative path to target working directory
+rel_path_to_target_dir <- "ue3"
+# Helper file name
+rel_path_from_target_dir_to_helper_file <- "helper.R"
+
+# Check if the code is run in RStudio
+checkIDEisRStudio <- function() {
+  isRStudio <- Sys.getenv("RSTUDIO") == "1"
+  if (isRStudio) {
+    return(TRUE)
+  } else {
+    return(FALSE)
+  }
+}
+
+# The working directory is only changed if the code is NOT run in RStudio
+if (!checkIDEisRStudio()) {
+  # Change relative path accordingly to your target working directory
+  abs_path_to_target_dir <- file.path(getwd(),rel_path_to_target_dir)
+  # Check if target directory exists
+  if(dir.exists(abs_path_to_target_dir)){
+    setwd(abs_path_to_target_dir)
+  }
+}
+
+# Check whether package is already installed, if not install it
+load <- function(package_name) {
+  if (length(find.package(package_name, quiet = TRUE)) == 0) {
+    # Set the CRAN mirror
+    options(repos = c(CRAN = "https://cran.wu.ac.at/"))
+    install.packages(package_name)
+  }
+  suppressWarnings(library(package_name, character.only = TRUE))
+}
+
+# Load packages
+load("pROC")
+load("caret")
+load("ResourceSelection")
+load("foreign")
+load("haven")
+load("tidyverse")
+load("car")
+load("ggplot2")
+load("stats")
+load("ROCit")
+load("ggpubr")
+load("nparLD")
+load("rcompanion")
+load("FSA")
+
+
+
+
+# Function to source helper file
+load_source <- function() {
+    if(!checkIDEisRStudio()){
+      if(file.exists(rel_path_from_target_dir_to_helper_file)){
+        source(rel_path_from_target_dir_to_helper_file)
+      }
+    } else {
+      helper_file <- basename(rel_path_from_target_dir_to_helper_file)
+      if(file.exists(helper_file)){
+        source(helper_file)
+      }
+  }
+}
+# Apply function to source helper file
+load_source()
+
+
+```
+
 # Allgemeine Information
 Alle Aufgaben sind mit R zu lössen, wenn nicht explizit anders angegeben. Die Berechnungen sollen nachvollziehbar und dokumentiert sein. Um die vollständige Punktezahl zu erreichen, müssen alle Ergebnisse und Fragen entsprechend interpretiert bzw. beantwortet werden. Code alleine ist nicht ausreichend! Die Abgabe erfolgt über Moodle entsprechend der Abgaberichtlinien als pdf und Rmd File. Bitte inkludieren Sie namentlich alle beteiligten Gruppenmitglieder sowohl im Bericht als auch im Source Code.
 Die jeweiligen Datensätze die für diese Übung relevant sind finden Sie ebenfalls in Moodle.
