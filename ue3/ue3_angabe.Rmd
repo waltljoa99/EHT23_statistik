@@ -1428,7 +1428,7 @@ stat.test_group <- tibble::tribble(
 stat.test_group
 
 # Determine the maximum value of the 'Score' column
-max_score <- max(data_susa$Score, na.rm = TRUE)
+max_score <- max(data_sus$Score, na.rm = TRUE)
 
 # Create an array of y positions starting from the maximum Score value and incrementing by a small amount
 y_positions <- max_score + seq(from = 1, to = 1, by = 1)
@@ -1517,7 +1517,9 @@ for (country in countries) {
   # Post hoc tests
 
   # Perform pairwise Wilcoxon tests
-  wilcox_group <- pairwise.wilcox.test(country_data$Score, country_data$Group, p.adjust.method = "BH")
+  wilcox_group <- pairwise.wilcox.test(country_data$Score, 
+                                       country_data$Group, 
+                                       p.adjust.method = "BH")
 
   # Extract p-values
   p_values_group <- wilcox_group$p.value
