@@ -17,7 +17,7 @@ output:
 # Helfer Funktionen für alle Nutzer laden
 
 # Set relative path to target working directory
-rel_path_to_target_dir <- "ue3"
+rel_path_to_target_dir <- "ue4"
 # Helper file name
 rel_path_from_target_dir_to_helper_file <- "helper.R"
 
@@ -31,16 +31,6 @@ checkIDEisRStudio <- function() {
   }
 }
 
-# The working directory is only changed if the code is NOT run in RStudio
-if (!checkIDEisRStudio()) {
-  # Change relative path accordingly to your target working directory
-  abs_path_to_target_dir <- file.path(getwd(),rel_path_to_target_dir)
-  # Check if target directory exists
-  if(dir.exists(abs_path_to_target_dir)){
-    setwd(abs_path_to_target_dir)
-  }
-}
-
 # Check whether package is already installed, if not install it
 load <- function(package_name) {
   if (length(find.package(package_name, quiet = TRUE)) == 0) {
@@ -51,6 +41,17 @@ load <- function(package_name) {
   suppressWarnings(library(package_name, character.only = TRUE))
 }
 
+# The working directory is only changed if the code is NOT run in RStudio
+if (!checkIDEisRStudio()) {
+  load("here")
+  # Change relative path accordingly to your target working directory
+  abs_path_to_target_dir <- file.path(here(),rel_path_to_target_dir)
+  # Check if target directory exists
+  if(dir.exists(abs_path_to_target_dir)){
+    setwd(abs_path_to_target_dir)
+  }
+}
+
 # Load packages
 load("pROC")
 load("caret")
@@ -59,6 +60,7 @@ load("foreign")
 load("haven")
 load("tidyverse")
 load("car")
+load("MVN")
 load("ggplot2")
 load("stats")
 load("ROCit")
@@ -66,6 +68,7 @@ load("ggpubr")
 load("nparLD")
 load("rcompanion")
 load("FSA")
+load("biotools")
 
 
 
@@ -112,7 +115,37 @@ Führen Sie eine Diskriminanzanalyse unter Berücksichtigung folgender Punkte du
 
 i) Explorative Analyse der Prädiktoren mit Hilfe von Histogrammen. Gibt es Prädiktoren, die bereits eine gute Trennung zwischen den Klassen erlauben?
 
+```{r}
+# Laden der Daten
+diabetes_RM <- read.csv("diabetes_RM.csv")
+# Explorative Analyse der Daten
+
+# Histogramme
+create_histograms(diabetes_RM)
+```
+
 ii) Überprüfen Sie ob die Vorraussetzungen für eine LDA gegeben sind und führen Sie eine Standardisierung der Daten durch.
+
+```{r}
+# Check for normality
+normality_tests <- apply(diabetes_RM[, sapply(diabetes_RM, is.numeric)], 2, shapiro.test)
+print(normality_tests)
+
+# Check for homogeneity of variances
+diabetes_RM$group <- as.factor(diabetes_RM$group) # Levene test requires a factor 
+numeric_columns <- diabetes_RM[, sapply(diabetes_RM, is.numeric), drop = FALSE]
+levene_tests <- lapply(numeric_columns, function(column) car::leveneTest(column, diabetes_RM$group))
+print(levene_tests)
+
+# Check for multivariate normality
+mvn_test <- MVN::mvn(diabetes_RM[, sapply(diabetes_RM, is.numeric)], mvnTest = "hz")
+print(mvn_test)
+
+# Check for equality of covariance matrices
+box_m_test <- biotools::boxM(diabetes_RM[, sapply(diabetes_RM, is.numeric)], diabetes_RM$group)
+print(box_m_test)
+```
+
 
 iii) Unterteilen sie die gesamten Daten in Trainings- und Test-Daten und führen Sie in der weiteren Folge eine Klassifizierung mit einer LDA durch. Evaluieren Sie die Perfomance der Klassifizierung und stellen Sie die Ergebnisse graphisch dar (Darstellung der Projektionen, Partition Plot).
 
