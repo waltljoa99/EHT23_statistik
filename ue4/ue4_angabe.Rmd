@@ -66,8 +66,11 @@ load("ggpubr")
 load("nparLD")
 load("rcompanion")
 load("FSA")
-
-
+load("MASS")
+load("dplyr")
+load("heplots")
+load("klaR")
+load("mda")
 
 
 # Function to source helper file
@@ -86,17 +89,24 @@ load_source <- function() {
 # Apply function to source helper file
 load_source()
 
-
 ```
 
 # Allgemeine Information
 Alle Aufgaben sind mit R zu lössen, wenn nicht explizit anders angegeben. Die Berechnungen sollen nachvollziehbar und dokumentiert sein. Um die vollständige Punktezahl zu erreichen, müssen alle Ergebnisse und Fragen entsprechend interpretiert bzw. beantwortet werden. Code alleine ist nicht ausreichend! Die Abgabe erfolgt über Moodle entsprechend der Abgaberichtlinien als pdf und Rmd File. Bitte inkludieren Sie namentlich alle beteiligten Gruppenmitglieder sowohl im Bericht als auch im Source Code.
 Die jeweiligen Datensätze die für diese Übung relevant sind finden Sie ebenfalls in Moodle.
 
-
-# Datensatz: Reaven and Miller Diabetes Daten
+# (Aufgabe 1) Datensatz: Reaven and Miller Diabetes Daten
 Verwenden Sie den Datensatz `diabetes_RM.csv`. Der Datensatz enthält fünf Messungen, die an 145 nicht adipösen erwachsenen Patienten durchgeführt wurden, die in drei Gruppen eingeteilt wurden.
 
+```{r}
+# Datensatz laden
+diabetes <- read.csv("diabetes_RM.csv")
+
+# Übersicht
+str(diabetes)
+head(diabetes)
+
+```
 Die drei primären Variablen sind die Glukoseintoleranz, die Insulinantwort auf orale Glukose und die Insulinresistenz (gemessen durch die Steady-State-Plasmaglukose, die nach chemischer Suppression der endogenen Insulinsekretion bestimmt wird). Zwei zusätzliche Variablen, das relative Gewicht und die Nüchternplasmaglukose, sind ebenfalls enthalten. Zusammengefasst ergeben sich folgende Prädiktorvariablen:
 
 * `rw`: relatives Gewicht, Verhältnis zwischen aktuellem Gewicht und zu erwartendem Gewicht bei der Körpergröße
@@ -112,7 +122,40 @@ Führen Sie eine Diskriminanzanalyse unter Berücksichtigung folgender Punkte du
 
 i) Explorative Analyse der Prädiktoren mit Hilfe von Histogrammen. Gibt es Prädiktoren, die bereits eine gute Trennung zwischen den Klassen erlauben?
 
+```{r}
+# Explorative Analyse
+
+# Mittelwerte für jede Gruppe berechnen
+aggregate(glucose~group,diabetes,mean)
+aggregate(glucose~group,diabetes,median)
+aggregate(glucose~group,diabetes,sd)
+
+aggregate(insulin~group,diabetes,mean)
+aggregate(fpg~group,diabetes,mean)
+aggregate(sspg~group,diabetes,mean)
+aggregate(rw~group,diabetes,mean)
+
+# Histogramme ansehen
+ggplot(diabetes,aes(glucose,col=group,fill=group)) +geom_histogram(alpha=0.5,position="identity")
+ggplot(diabetes,aes(insulin,col=group,fill=group)) +geom_histogram(alpha=0.5,position="identity")
+ggplot(diabetes,aes(fpg,col=group,fill=group)) +geom_histogram(alpha=0.5,position="identity")
+ggplot(diabetes,aes(sspg,col=group,fill=group)) +geom_histogram(alpha=0.5,position="identity")
+ggplot(diabetes,aes(rw,col=group,fill=group)) +geom_histogram(alpha=0.5,position="identity")
+
+```
+Anhand der Histogramme lässt sich kein Prädiktor identifizieren, der eine klare Trennung zwischen den Klassen erlaubt.
+
 ii) Überprüfen Sie ob die Vorraussetzungen für eine LDA gegeben sind und führen Sie eine Standardisierung der Daten durch.
+
+```{r}
+# Überprüfen der Voraussetzungen
+
+# Normalverteilung der Prädiktoren
+for (i in 2:6) {
+  print(shapiro.test(diabetes[,i]))
+}
+```
+
 
 iii) Unterteilen sie die gesamten Daten in Trainings- und Test-Daten und führen Sie in der weiteren Folge eine Klassifizierung mit einer LDA durch. Evaluieren Sie die Perfomance der Klassifizierung und stellen Sie die Ergebnisse graphisch dar (Darstellung der Projektionen, Partition Plot).
 
