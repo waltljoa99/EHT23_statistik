@@ -68,18 +68,12 @@ load("ggpubr")
 load("nparLD")
 load("rcompanion")
 load("FSA")
-<<<<<<< HEAD
 load("MASS")
 load("dplyr")
 load("heplots")
 load("klaR")
 load("mda")
-=======
 load("biotools")
-
-
->>>>>>> d4d2fae752e771b9232904acfed0be90e0d715e5
-
 
 # Function to source helper file
 load_source <- function() {
@@ -131,7 +125,6 @@ Führen Sie eine Diskriminanzanalyse unter Berücksichtigung folgender Punkte du
 i) Explorative Analyse der Prädiktoren mit Hilfe von Histogrammen. Gibt es Prädiktoren, die bereits eine gute Trennung zwischen den Klassen erlauben?
 
 ```{r}
-<<<<<<< HEAD
 # Explorative Analyse
 
 # Mittelwerte für jede Gruppe berechnen
@@ -153,27 +146,28 @@ ggplot(diabetes,aes(rw,col=group,fill=group)) +geom_histogram(alpha=0.5,position
 
 ```
 Anhand der Histogramme lässt sich kein Prädiktor identifizieren, der eine klare Trennung zwischen den Klassen erlaubt.
-=======
+
+```{r}
 # Laden der Daten
 diabetes_RM <- read.csv("diabetes_RM.csv")
 # Explorative Analyse der Daten
 
 # Histogramme
 create_histograms(diabetes_RM)
+
 ```
->>>>>>> d4d2fae752e771b9232904acfed0be90e0d715e5
+
 
 ii) Überprüfen Sie ob die Vorraussetzungen für eine LDA gegeben sind und führen Sie eine Standardisierung der Daten durch.
 
 ```{r}
-<<<<<<< HEAD
 # Überprüfen der Voraussetzungen
 
 # Normalverteilung der Prädiktoren
 for (i in 2:6) {
   print(shapiro.test(diabetes[,i]))
 }
-=======
+
 # Check for normality
 normality_tests <- apply(diabetes_RM[, sapply(diabetes_RM, is.numeric)], 2, shapiro.test)
 print(normality_tests)
@@ -191,7 +185,7 @@ print(mvn_test)
 # Check for equality of covariance matrices
 box_m_test <- biotools::boxM(diabetes_RM[, sapply(diabetes_RM, is.numeric)], diabetes_RM$group)
 print(box_m_test)
->>>>>>> d4d2fae752e771b9232904acfed0be90e0d715e5
+
 ```
 
 
