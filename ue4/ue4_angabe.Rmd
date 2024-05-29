@@ -127,15 +127,21 @@ i) Explorative Analyse der Prädiktoren mit Hilfe von Histogrammen. Gibt es Prä
 ```{r}
 # Explorative Analyse
 
-# Mittelwerte für jede Gruppe berechnen
-aggregate(glucose~group,diabetes,mean)
-aggregate(glucose~group,diabetes,median)
-aggregate(glucose~group,diabetes,sd)
+# Mittelwerte für jede Gruppe berechnen 
 
-aggregate(insulin~group,diabetes,mean)
-aggregate(fpg~group,diabetes,mean)
-aggregate(sspg~group,diabetes,mean)
-aggregate(rw~group,diabetes,mean)
+# Glucose
+means <- aggregate(glucose~group,diabetes,mean)
+medians <- aggregate(glucose~group,diabetes,median)
+sd <- aggregate(glucose~group,diabetes,FUN = "sd")
+  
+  # Insulin
+insulin_mean <- aggregate(insulin~group,diabetes,mean)
+# fpg
+fpg_mean <- aggregate(fpg~group,diabetes,mean)
+# sspg
+sspg_mean <- aggregate(sspg~group,diabetes,mean)
+# rw
+rw_mean <- aggregate(rw~group,diabetes,mean)
 
 # Histogramme ansehen
 ggplot(diabetes,aes(glucose,col=group,fill=group)) +geom_histogram(alpha=0.5,position="identity")
@@ -145,7 +151,7 @@ ggplot(diabetes,aes(sspg,col=group,fill=group)) +geom_histogram(alpha=0.5,positi
 ggplot(diabetes,aes(rw,col=group,fill=group)) +geom_histogram(alpha=0.5,position="identity")
 
 ```
-Anhand der Histogramme lässt sich kein Prädiktor identifizieren, der eine klare Trennung zwischen den Klassen erlaubt.
+Anhand der Histogramme lässt sich kein Prädiktor identifizieren, der eine klare Trennung zwischen den Klassen erlaubt. Am ehesten ist beim Prädiktor 'glucose' eine Abgrenzung der Gruppen zu erkennen.
 
 ```{r}
 # Laden der Daten
@@ -163,18 +169,15 @@ ii) Überprüfen Sie ob die Vorraussetzungen für eine LDA gegeben sind und füh
 ```{r}
 # Überprüfen der Voraussetzungen
 
-# Normalverteilung der Prädiktoren
-for (i in 2:6) {
+# Normalverteilung der Prädiktoren (strenge Überprüfung)
+for (i in 1:5) {
   print(shapiro.test(diabetes[,i]))
 }
-
-# Check for normality
-normality_tests <- apply(diabetes_RM[, sapply(diabetes_RM, is.numeric)], 2, shapiro.test)
-print(normality_tests)
 
 # Check for homogeneity of variances
 diabetes_RM$group <- as.factor(diabetes_RM$group) # Levene test requires a factor 
 numeric_columns <- diabetes_RM[, sapply(diabetes_RM, is.numeric), drop = FALSE]
+
 levene_tests <- lapply(numeric_columns, function(column) car::leveneTest(column, diabetes_RM$group))
 print(levene_tests)
 
@@ -190,6 +193,11 @@ print(box_m_test)
 
 
 iii) Unterteilen sie die gesamten Daten in Trainings- und Test-Daten und führen Sie in der weiteren Folge eine Klassifizierung mit einer LDA durch. Evaluieren Sie die Perfomance der Klassifizierung und stellen Sie die Ergebnisse graphisch dar (Darstellung der Projektionen, Partition Plot).
+
+```{r}
+
+```
+
 
 iiii) Vergleichen Sie unterschiedliche Varianten der Diskriminanzanalyse (QDA, MDA, FDA) hinsichtlich ihrer Klassifikationsgenauigkeit.
 
