@@ -163,9 +163,10 @@ ii) Überprüfen Sie ob die Vorraussetzungen für eine LDA gegeben sind und füh
 ```{r}
 # Überprüfen der Voraussetzungen
 
+
 # Normalverteilung der Prädiktoren
-for (i in 2:6) {
-  print(shapiro.test(diabetes[,i]))
+for (i in 1:4) {
+  print(shapiro.test(diabetes_RM[,i]))
 }
 
 # Check for normality
@@ -199,7 +200,45 @@ Führen Sie eine PCA unter Berücksichtigung folgender Punkte durch:
 
 i) Überprüfung der paarweisen Kovarianzen / Korrelationen
 
+```{r}
+# Load data
+diabetes <- read.csv("diabetes_RM.csv")
+
+# Overview
+str(diabetes)
+head(diabetes)
+
+# Calculate variance for each numeric column
+variances <- sapply(diabetes[sapply(diabetes, is.numeric)], var)
+print(variances)
+
+# Calculate covariance between all pairs of numeric columns
+covariances <- cov(diabetes[sapply(diabetes, is.numeric)])
+print(covariances)
+```
+
 ii) Berechnen der PCA und Beurteilung wie viele PCs sinnvoll sind (Eigenwerte und Screeplot).
+
+```{r}
+
+# Perform PCA
+pca_result <- prcomp(diabetes[sapply(diabetes, is.numeric)], scale. = TRUE)
+
+# Print summary of the PCA result
+print(summary(pca_result))
+
+# Eigenvalues (variances of the principal components)
+eigenvalues <- pca_result$sdev^2
+print(eigenvalues)
+
+# Scree plot
+scree_df <- data.frame(PC = 1:length(eigenvalues), eigenvalues = eigenvalues)
+ggplot(data = scree_df, aes(x = PC, y = eigenvalues)) +
+  geom_line() +
+  geom_point() +
+  scale_x_continuous(breaks = 1:length(eigenvalues)) +
+  labs(title = "Scree Plot", x = "Principal Component", y = "Eigenvalue")
+```
 
 iii) Transformation der ursprünglichen Daten in ein PC-Koordinatensystem mit zwei PCs. Vergleichen Sie die Darstellung mit dem Ergebnis der LDA (LD1 und LD2 Projektionen).
 

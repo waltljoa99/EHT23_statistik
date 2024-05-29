@@ -13,7 +13,7 @@ runAllChunks <- function(rmd, envir = globalenv()) {
 
 # Run all chunks in THIS document
 run <- function() {
-  runAllChunks("ue3_angabe.Rmd")
+  runAllChunks("ue4_angabe.Rmd")
 }
 
 ########################################################################################
