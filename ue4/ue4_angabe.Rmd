@@ -74,6 +74,7 @@ load("heplots")
 load("klaR")
 load("mda")
 load("biotools")
+load("psych")
 
 # Function to source helper file
 load_source <- function() {
@@ -108,14 +109,37 @@ diabetes <- read.csv("diabetes_RM.csv")
 str(diabetes)
 head(diabetes)
 
+# Outcomevariable als Faktor definieren
+diabetes$group <- as.factor(diabetes$group)
+
+# Zusammenfassung
+summary(diabetes)
+
+pairs.panels(diabetes[1:5],
+             gap = 0,
+             bg = c("green","red","blue")[diabetes$group],
+             pch = 21)
+
+
 ```
 Die drei primären Variablen sind die Glukoseintoleranz, die Insulinantwort auf orale Glukose und die Insulinresistenz (gemessen durch die Steady-State-Plasmaglukose, die nach chemischer Suppression der endogenen Insulinsekretion bestimmt wird). Zwei zusätzliche Variablen, das relative Gewicht und die Nüchternplasmaglukose, sind ebenfalls enthalten. Zusammengefasst ergeben sich folgende Prädiktorvariablen:
 
 * `rw`: relatives Gewicht, Verhältnis zwischen aktuellem Gewicht und zu erwartendem Gewicht bei der Körpergröße
 * `fpg`: Nüchternglukoselevel im Plasma in mg/dl 
 * `glucose`: Fläche unter Glukose-Antwort (mg/dl*h) nach 3h oralem Glukosetoleranztest (OGTT) 
-* `insulin`: Fläche unter der Insulin-Antwort (mg/dl*h) nach OGTT 
+* `insulin`: Fläche unter der Insulin-Antwort (mg/dl*h) nach OGTT
 * `sspg`: Steady-State-Plasmaglukose (mg/dl) als Maß für die Insulinresistenz
+
+```{r}
+# Variable Beschreibungen
+descriptions <- list(
+  c("rw: relatives Gewicht,", "Verhältnis zwischen aktuellem", "Gewicht und zu erwartendem Gewicht", "bei der Körpergröße"),
+  c("fpg: Nüchternglukoselevel", "im Plasma in mg/dl"),
+  c("glucose: Fläche unter Glukose-Antwort", "(mg/dl*h) nach 3h oralem", "Glukosetoleranztest (OGTT)"),
+  c("insulin: Fläche unter der Insulin-Antwort", "(mg/dl*h) nach OGTT"),
+  c("sspg: Steady-State-Plasmaglukose", "(mg/dl) als Maß für die", "Insulinresistenz")
+)
+```
 
 Reaven und Miller [[ref]](https://doi.org/10.1007/BF00423145) wendeten in Anlehnung an Friedman und Rubin (1967) eine Clusteranalyse auf die drei primären Variablen an und identifizierten drei Cluster: "normal", "chemical" und "overt" diabetsiche Probanden. Die Variable `group` enthält die Klassifizierungen der Probanden in diese drei Gruppen. 
 
@@ -127,87 +151,328 @@ i) Explorative Analyse der Prädiktoren mit Hilfe von Histogrammen. Gibt es Prä
 ```{r}
 # Explorative Analyse
 
-# Mittelwerte für jede Gruppe berechnen 
+# Mittelwerte aller Gruppe für numerische Prädiktoren berechnen 
 
-# Glucose
-means <- aggregate(glucose~group,diabetes,mean)
-medians <- aggregate(glucose~group,diabetes,median)
-sd <- aggregate(glucose~group,diabetes,FUN = "sd")
-  
-  # Insulin
-insulin_mean <- aggregate(insulin~group,diabetes,mean)
-# fpg
-fpg_mean <- aggregate(fpg~group,diabetes,mean)
-# sspg
-sspg_mean <- aggregate(sspg~group,diabetes,mean)
-# rw
-rw_mean <- aggregate(rw~group,diabetes,mean)
+# Tabelle
+aggregate(cbind(glucose,insulin,fpg,sspg,rw)~group,diabetes,mean)
 
-# Histogramme ansehen
-ggplot(diabetes,aes(glucose,col=group,fill=group)) +geom_histogram(alpha=0.5,position="identity")
-ggplot(diabetes,aes(insulin,col=group,fill=group)) +geom_histogram(alpha=0.5,position="identity")
-ggplot(diabetes,aes(fpg,col=group,fill=group)) +geom_histogram(alpha=0.5,position="identity")
-ggplot(diabetes,aes(sspg,col=group,fill=group)) +geom_histogram(alpha=0.5,position="identity")
-ggplot(diabetes,aes(rw,col=group,fill=group)) +geom_histogram(alpha=0.5,position="identity")
-
+# Histogramme
+create_histograms(diabetes)
 ```
 Anhand der Histogramme lässt sich kein Prädiktor identifizieren, der eine klare Trennung zwischen den Klassen erlaubt. Am ehesten ist beim Prädiktor 'glucose' eine Abgrenzung der Gruppen zu erkennen.
 
 ```{r}
-# Laden der Daten
-diabetes_RM <- read.csv("diabetes_RM.csv")
-# Explorative Analyse der Daten
+# Explorativer Ansatz zur Trennung der Gruppen
+# Grenzen anhand des Prädiktors 'glucose' 
+grenzen <- c(425,600)
 
-# Histogramme
-create_histograms(diabetes_RM)
+ggplot(diabetes, aes(x = glucose, fill = group)) +
+    geom_histogram(position = "identity", alpha = 0.5, bins = 30) +
+    labs(x = "glucose", y = "Count", fill = "group") +
+    # Grenze einfügen
+    geom_vline(xintercept = grenzen, linetype = "dashed", color = "black") +
+    theme_minimal()
+
+# Klassifizierung der Gruppen anhand der Grenzen
+diabetes$group_K1<- ifelse(diabetes$glucose < grenzen[1], "normal",
+                             ifelse(diabetes$glucose < grenzen[2], "chemical",
+                                    "overt"))
+
+# Genauigkeit der Klassifizierung
+mean(diabetes$group_K1 == diabetes$group)
 
 ```
-
+Durch die Klassifizierung anhand des Prädiktors 'glucose' konnte eine Genauigkeit von knapp 96% erreicht werden. Dies deutet darauf hin, dass der Prädiktor 'glucose' tatsächlich bereits eine recht gute Trennung der Gruppen ermöglicht. Im nächsten Schritt wird eine Diskriminanzanalyse (LDA) durchgeführt, um hoffentlich eine noch akuratere Klassifizierung der Gruppen zu erreichen.
 
 ii) Überprüfen Sie ob die Vorraussetzungen für eine LDA gegeben sind und führen Sie eine Standardisierung der Daten durch.
 
 ```{r}
 # Überprüfen der Voraussetzungen
 
-# Normalverteilung der Prädiktoren (strenge Überprüfung)
+# Normalverteilung der Prädiktoren (Visuell u. Konservativ)
+
+print("p-Werte des Shapiro-Wilk-Tests: ")
 for (i in 1:5) {
-  print(shapiro.test(diabetes[,i]))
+  
+  #Shapiro-Wilk-Test
+  sw_p <- shapiro.test(diabetes[,i])$p.value
+  print(paste("p-Wert für", colnames(diabetes)[i], ":", sw_p))
+  
+  
+  par(mfrow = c(1,2))
+  # Histogramme
+  hist(diabetes[,i], main = colnames(diabetes)[i], xlab = "")
+   for (j in 1:length(descriptions[[i]])) {
+    mtext(descriptions[[i]][j], side = 1, line = 1 + j, cex = 0.8, col =   "blue")
+  }
+  # QQ-Plots
+  qqnorm(diabetes[,i])
+  qqline(diabetes[,i])
+  
 }
 
-# Check for homogeneity of variances
-diabetes_RM$group <- as.factor(diabetes_RM$group) # Levene test requires a factor 
-numeric_columns <- diabetes_RM[, sapply(diabetes_RM, is.numeric), drop = FALSE]
-
-levene_tests <- lapply(numeric_columns, function(column) car::leveneTest(column, diabetes_RM$group))
-print(levene_tests)
-
-# Check for multivariate normality
-mvn_test <- MVN::mvn(diabetes_RM[, sapply(diabetes_RM, is.numeric)], mvnTest = "hz")
+# Überprüfung der Multivariaten Normalverteilung
+mvn_test <- MVN::mvn(diabetes[, sapply(diabetes, is.numeric)], mvnTest = "hz")
 print(mvn_test)
-
-# Check for equality of covariance matrices
-box_m_test <- biotools::boxM(diabetes_RM[, sapply(diabetes_RM, is.numeric)], diabetes_RM$group)
-print(box_m_test)
 
 ```
 
+In den Histogrammen und QQ-Plots ist zu erkennen, dass die Prädiktoren 'glucose', 'fpg' und 'insulin' deutliche Abweichungen von der Normalverteilung aufweisen. Ihre Verteilungen zeigen eine starke Rechtsschiefe und in den QQ-Plots sind deutliche Abweichungen von der Normalverteilung ersichtlich, insbesondere in den oberen Quantilen.
 
+Die Prädiktoren 'sspg' und 'rw' sind hingegen annähernd normalverteilt.
+```{r}
+# Transformieren der Daten
+diabetes_trans <- diabetes %>%
+  mutate(glucose  = log(glucose+1),
+         fpg = log(fpg+1),
+         sspg  = log(sspg + 1),
+         insulin = log(insulin + 1),
+         rw = sqrt(rw),
+         group = as.factor(group))
+
+# Überprüfung der Transformation
+pairs.panels(diabetes_trans[1:5],
+             gap = 0,
+             bg = c("green","red","blue")[diabetes_trans$group],
+             pch = 21)
+
+```
+Auch der Multivariate Normalverteilungstest zeigt, dass die Daten nicht multivariat normalverteilt sind.
+
+Selbst nach der Transformation der Daten sind die Prädiktoren 'glucose', 'fpg' und 'insulin' noch immer nicht normalverteilt. Die Diskriminanzanalyse wird dennoch durchgeführt, da sie robust gegenüber Verletzungen der Normalverteilung ist.
+
+```{r}
+# Korrelationen
+cor_matrix <- cor(diabetes[,1:5])
+print(cor_matrix)
+```
+
+Die Korrelationsmatrix zeigt, dass der Prädiktor 'glucose' eine starke positive Korrelation mit den Prädiktoren 'fpg'(0.96) und 'sspg'(0.77) aufweist.
+
+```{r} 
+# Kovarianzen
+cov_matrix <- cov(diabetes[,1:5])
+print(cov_matrix)
+
+```
+
+```{r}
+# Überprüfung der Homogenität der Kovarianzen
+boxM_test <- boxM(diabetes[, sapply(diabetes, is.numeric)], diabetes$group)
+print(boxM_test)
+```
+
+Der Box-M-Test zeigt, dass die Kovarianzmatrizen der Gruppen nicht gleich sind. Dies bedeutet, dass die Annahme der Homogenität der Kovarianzmatrizen verletzt ist.
+Streng genommen sind die Voraussetzungen für eine LDA nicht gegeben. Da die LDA in Klassifizierungsaufgaben jedoch robust gegenüber Verletzungen der Normalverteilung und Homogenität der Kovarianzen ist, wird die LDA dennoch durchgeführt.
+
+Um eine bessere Vergleichbarkeit der Prädiktoren zu gewährleisten, werden die Daten standardisiert.
+
+```{r}
+# Standardisierung der Daten (mittels preProcess-Funktion)
+diabetes.prePro <- preProcess(diabetes[, sapply(diabetes, is.numeric)], method = c("center", "scale"))
+# Anwenden des Preprocessers
+diabetes.pre <- predict(diabetes.prePro, diabetes[, sapply(diabetes, is.numeric)])
+# Hinzufügen der Gruppe
+diabetes.pre$group <- as.factor(diabetes$group)
+
+# Alternative: Standardisieren in data.frame (mittels Scale-Funktion)(Transformierte Daten)
+diabetes_trans.pre1<-data.frame(rw=scale(diabetes_trans$rw),
+                         fpg=scale(diabetes_trans$fpg),
+                         glucose=scale(diabetes_trans$glucose),
+                         insulin=scale(diabetes_trans$insulin),
+                         sspg=scale(diabetes_trans$sspg),
+                         group=diabetes_trans$group)
+
+```
 iii) Unterteilen sie die gesamten Daten in Trainings- und Test-Daten und führen Sie in der weiteren Folge eine Klassifizierung mit einer LDA durch. Evaluieren Sie die Perfomance der Klassifizierung und stellen Sie die Ergebnisse graphisch dar (Darstellung der Projektionen, Partition Plot).
 
 ```{r}
+# Splitten der Daten in Trainings- und Testdaten (80/20)
+set.seed(42) # Für Reproduzierbarkeit
+
+trainIndex <- sample(1:145, 0.8 * 145, replace = FALSE)
+trainData <- diabetes.pre[ trainIndex,]
+testData  <- diabetes.pre[-trainIndex,]
+
+# Splitten der transformierten Daten
+set.seed(42) 
+trainIndex <- sample(1:145, 0.8 * 145, replace = FALSE)
+trainData_t <- diabetes_trans.pre1[ trainIndex,]
+testData_t <- diabetes_trans.pre1[-trainIndex,]
 
 ```
 
+Nachdem die Daten in Trainings- und Testdaten aufgeteilt wurden, wird die LDA durchgeführt.
+
+```{r}
+# LDA (Daten ohne Transformation)
+lda_m1 <- lda(group ~ glucose + fpg + insulin + sspg + rw, data = trainData)
+# LDA (Daten mit Transformation)
+lda_m2 <- lda(group ~ glucose + fpg + insulin + sspg + rw, data = trainData_t)
+
+    # LDA nur mit Hauptvariablen
+    lda_gis <- lda(group ~ glucose + rw + insulin + sspg, data = trainData)
+    lda_gis.p <- predict(lda_gis, newdata = trainData)
+
+# Zusammenfassung des Modells
+lda_m1
+lda_m2
+lda_gis
+
+# Klasse der Trainingsdaten vorhersagen
+lda_m1.p <- predict(lda_m1, newdata = trainData)
+lda_gis.p <- predict(lda_gis, newdata = trainData)
+lda_m2.p <- predict(lda_m2, newdata = trainData_t)
+
+head(lda_m1.p$posterior)
+head(lda_m1.p$class)
+    
+# Genauigkeit des Modells überprüfen
+print(paste("Model 1 (alle Parameter):",mean(lda_m1.p$class == trainData_t$group)))
+print(paste("Model 2 (trans. Parameter):",mean(lda_m2.p$class == trainData_t$group)))
+print(paste("Model 3 (nur Hauptparameter):",mean(lda_gis.p$class == trainData_t$group)))
+
+```
+
+Da durch das Modell mit den transformierten Daten eine höhere Genauigkeit erreicht werden konnte, wird neben dem Model 1 auch dieses Modell für die weitere Analyse und Klassifikation der Testdaten verwendet. 
+
+```{r}
+#lda Trennung darstellen
+# Partition Plot
+partimat(group ~ glucose + fpg + insulin + sspg + rw,
+         data = diabetes.pre, method = "lda",
+         image.colors = c("aquamarine", "gray", "darkorange"))
+
+# Projektionen
+lda_m1.p$x #LD1 und LD2
+
+# lda_m1.p$x als data.frame
+lda_m1.p$x <- as.data.frame(lda_m1.p$x)
+
+#projektionen graphisch darstellen
+ggplot(lda_m1.p$x, aes(x = LD1, y = LD2, color = trainData$group)) +
+  geom_point() +
+  ggtitle("LDA Projektionen (Trainingsdaten)") +
+  xlab("LD1") +
+  ylab("LD2") +
+  theme_minimal()
+
+# Histogramme der Projektionen
+ldahist(lda_m1.p$x[,1], g = trainData$group,type = "both")
+ldahist(lda_m1.p$x[,2], g = trainData$group, type = "both")
+
+```
+
+```{r}
+# Vorhersage auf Testdaten
+lda_pred <- predict(lda_m1, newdata = testData)
+lda_pred2 <- predict(lda_m2, newdata = testData_t)
+
+head(lda_pred$posterior)
+head(lda_pred$class)
+
+# Genauigkeit des Modells überprüfen
+ac_lda <-mean(lda_pred$class == testData$group) # 93%
+ac_lda_t <-mean(lda_pred2$class == testData_t$group) # 90%
+
+# Projektionen der Testdaten 
+lda_pred$x #LD1 und LD2
+
+# lda_m1.p$x als data.frame
+lda_pred$x <- as.data.frame(lda_pred$x)
+
+#projektionen graphisch darstellen
+ggplot(lda_pred$x, aes(x = LD1, y = LD2, color = testData$group)) +
+  geom_point() +
+  ggtitle("LDA Projektionen (Testdaten)") +
+  xlab("LD1") +
+  ylab("LD2") +
+  theme_minimal()
+
+# Histogramme der Projektionen
+ldahist(lda_pred$x[,1], g = testData$group,type = "both")
+ldahist(lda_pred$x[,2], g = testData$group, type = "both")
+
+```
+Die Klassifikationsgenauigkeit von Modell 1 beträgt auf den Testdaten 93%. Somit performt das Modell auf den Testdaten etwas besser als auf den Trainingsdaten, da diese nur zu 90% richtig klassifiziert wurden. Erstaunlich ist, dass der anfänglich untersuchte, explorative Ansatz einer Klassifikation über einen einfachen Schwellwert der Glucose-Variable zu einer höheren Klassifikationsgenauigkeit führte. 
+
+Das Modell 2, welches die transformierten Daten verwendet, erreicht auf den Testdaten eine Klassifikationsgenauigkeit von 90% und auf den Trainingsdaten eine Genauigkeit von 93%. 
 
 iiii) Vergleichen Sie unterschiedliche Varianten der Diskriminanzanalyse (QDA, MDA, FDA) hinsichtlich ihrer Klassifikationsgenauigkeit.
 
+```{r}
+#quadratische QDA
+m_qda <- qda(group ~ glucose + fpg + insulin + sspg + rw, data = trainData)
+m_qda.p <- predict(m_qda, newdata = testData)
+ac_qda <- mean(m_qda.p$class == testData$group) # 0.90
+
+#MDA
+library(mda)
+m_mda <- mda(group ~ glucose + fpg + insulin + sspg + rw, data = trainData)
+m_mda.p <- predict(m_mda, newdata = testData)
+ac_mda <- mean(m_mda.p== testData$group) # 0.90
+
+#FDA
+m_fda <- fda(group ~ glucose + fpg + insulin + sspg + rw, data = trainData)
+m_fda.p <- predict(m_fda, newdata = testData)
+ac_fda <-mean(m_fda.p == testData$group) # 0.93
+
+#RDA
+m_rda <- rda(group ~ glucose + fpg + insulin + sspg + rw, data = trainData)
+m_rda.p <- predict(m_rda, newdata = testData)
+ac_rda <- mean(m_rda.p$class == testData$group) # 0.93
+
+# Tabelle
+results <- data.frame(Model = c("LDA","LDA_T", "QDA", "MDA", "FDA", "RDA"),
+                      Genauigkeit = c(ac_lda, ac_lda_t, ac_qda, ac_mda, ac_fda, ac_rda))
+print(results)
+```
+Sowohl die FDA als auch die RDA erreichen ebenfalls eine Klassifikationsgenauigkeit von 93% auf den Testdaten. Die QDA, MDA sowie die LDA mit transformierten Daten erreichen nur eine Genauigkeit von etwa 90%.
 
 # 2 Principal Component Analyse [5P]
 Führen Sie eine PCA unter Berücksichtigung folgender Punkte durch:
 
 i) Überprüfung der paarweisen Kovarianzen / Korrelationen
 
+```{r}
+# Load data
+diabetes <- read.csv("diabetes_RM.csv")
+
+# Overview
+str(diabetes)
+head(diabetes)
+
+# Calculate variance for each numeric column
+variances <- sapply(diabetes[sapply(diabetes, is.numeric)], var)
+print(variances)
+
+# Calculate covariance between all pairs of numeric columns
+covariances <- cov(diabetes[sapply(diabetes, is.numeric)])
+print(covariances)
+```
+
 ii) Berechnen der PCA und Beurteilung wie viele PCs sinnvoll sind (Eigenwerte und Screeplot).
+
+```{r}
+
+# Perform PCA
+pca_result <- prcomp(diabetes[sapply(diabetes, is.numeric)], scale. = TRUE)
+
+# Print summary of the PCA result
+print(summary(pca_result))
+
+# Eigenvalues (variances of the principal components)
+eigenvalues <- pca_result$sdev^2
+print(eigenvalues)
+
+# Scree plot
+scree_df <- data.frame(PC = 1:length(eigenvalues), eigenvalues = eigenvalues)
+ggplot(data = scree_df, aes(x = PC, y = eigenvalues)) +
+  geom_line() +
+  geom_point() +
+  scale_x_continuous(breaks = 1:length(eigenvalues)) +
+  labs(title = "Scree Plot", x = "Principal Component", y = "Eigenvalue")
+```
 
 iii) Transformation der ursprünglichen Daten in ein PC-Koordinatensystem mit zwei PCs. Vergleichen Sie die Darstellung mit dem Ergebnis der LDA (LD1 und LD2 Projektionen).
 
