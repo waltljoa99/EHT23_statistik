@@ -75,6 +75,9 @@ load("klaR")
 load("mda")
 load("biotools")
 load("psych")
+load("FactoMineR")
+load("factoextra")
+
 
 # Function to source helper file
 load_source <- function() {
@@ -449,7 +452,21 @@ print(variances)
 # Calculate covariance between all pairs of numeric columns
 covariances <- cov(diabetes[sapply(diabetes, is.numeric)])
 print(covariances)
+
+# Select only numeric variables, excluding 'group'
+numeric_vars <- sapply(diabetes, is.numeric)
+numeric_vars["group"] <- FALSE
+
+# Compute the correlation matrix
+cor_matrix <- cor(diabetes[numeric_vars])
+
+# Print the correlation matrix
+print(cor_matrix)
 ```
+
+Die Kovarianzmatrix zeigt, dass es Korrelationen zwischen unterschiedlichen Variablen gibt:
+Kovarianzen ungleich 0.
+
 
 ii) Berechnen der PCA und Beurteilung wie viele PCs sinnvoll sind (Eigenwerte und Screeplot).
 
@@ -474,10 +491,60 @@ ggplot(data = scree_df, aes(x = PC, y = eigenvalues)) +
   labs(title = "Scree Plot", x = "Principal Component", y = "Eigenvalue")
 ```
 
+Da PCA1 und PCA2 bereits 82% der totalen Streuung erklären, können zwei maximal 3 (96%) PCs sinnvoll sein.
+
 iii) Transformation der ursprünglichen Daten in ein PC-Koordinatensystem mit zwei PCs. Vergleichen Sie die Darstellung mit dem Ergebnis der LDA (LD1 und LD2 Projektionen).
+
+```{r}
+# Perform PCA
+pca_result <- prcomp(diabetes[sapply(diabetes, is.numeric)], scale. = TRUE)
+
+# Extract the scores of the first two PCs
+PC1_scores <- pca_result$x[,1]
+PC2_scores <- pca_result$x[,2]
+
+# Create a new data frame with the scores of the first two PCs
+transformed_data <- data.frame(PC1 = PC1_scores, PC2 = PC2_scores)
+
+# Print the transformed data
+print(transformed_data)
+
+```
 
 iii) Stellen Sie den Correlation Circle und Biplot graphisch dar. Welche Information liefert diese Darstellung?
 
+```{r}
+# Perform PCA
+pca_result <- prcomp(diabetes[sapply(diabetes, is.numeric)], scale. = TRUE)
+
+# Plot the correlation circle
+fviz_pca_var(pca_result, col.var="contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), repel = TRUE)
+
+# Plot the biplot
+fviz_pca_biplot(pca_result, col.var="#2E9FDF", col.ind="#696969")
+```
+
+Correlation Circle:
+
+Die Länge der Vektoren (0 bis 1) zeigt die Stärke der Korrelation zwischen den Variablen und den PCA-Achsen.
+Die Normalprojektion der Vektoren auf die Achsen zeigt die Korrelation zwischen den Prädiktoren und den jeweiligen Achsen.
+Da die ersten zwei PCA-Dimensionsn etwa 82% der totalen Streuung erklären, sind die Vektoren hinreichend nahe bei 1.
+Am geringsten ist die Korrelation zwischen den Variablen rw und insulin und den PCA-Achsen, da sie die kürzesten Vektoren haben.
+
+Biplot:
+
+Es ist gut erkennbar, dass die Streuung der Datenpunkte um die PCA1-Achse (55% der totalen Streuung) stärker ist 
+als die Streuung um die PCA2-Achse (28% der totalen Streuung). Die Vektoren der Variablen glucose und fpg zeigen
+in Richtung der PCA1-Achse, was für eine starke Korrelation zwischen diesen Variablen und der PCA1-Achse spricht.
+Dasselbe gilt für die Vektoren der Variablen insulin und rw für die PCA2-Achse.
+
+
 iiii) Beurteilen Sie die Qualität und Beiträge der Variablen auf die PCs.
+
+Die Variablen fpg, glucose und sspg tragen am stärksten zu den PCAs bei. glucose und fpg tragen am stärksten zu PCA1 bei.
+Bei fpg, glucose, sspg und rw besteht eine positive Korrelation zu PCA1.
+Die Variablen insulin und rw tragen am stärksten zu PCA2 bei und korrelieren positiv mit PCA2.
+insulin korreliert gut erkennbar negativ mit PCA1, während fpg und glucose leicht negativ mit PCA2 korrelieren.
+
 
 iiiii) Wiederholen Sie die LDA von Aufgabe 1 unter Verwendung der PCs zur Klassifizierung. Achten Sie auf die Verwendung der gleichen Trainings- und Test-Daten und vergleichen Sie die Performance. Vergleichen Sie weiters die Performance der LDA mit den Variablen `glucose` und `fpg` mit der PCA+LDA mit zwei PCs.
