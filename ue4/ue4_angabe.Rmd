@@ -77,6 +77,7 @@ load("biotools")
 load("psych")
 load("FactoMineR")
 load("factoextra")
+load("gridExtra")
 
 
 # Function to source helper file
@@ -135,13 +136,7 @@ Die drei primären Variablen sind die Glukoseintoleranz, die Insulinantwort auf 
 
 ```{r}
 # Variable Beschreibungen
-descriptions <- list(
-  c("rw: relatives Gewicht,", "Verhältnis zwischen aktuellem", "Gewicht und zu erwartendem Gewicht", "bei der Körpergröße"),
-  c("fpg: Nüchternglukoselevel", "im Plasma in mg/dl"),
-  c("glucose: Fläche unter Glukose-Antwort", "(mg/dl*h) nach 3h oralem", "Glukosetoleranztest (OGTT)"),
-  c("insulin: Fläche unter der Insulin-Antwort", "(mg/dl*h) nach OGTT"),
-  c("sspg: Steady-State-Plasmaglukose", "(mg/dl) als Maß für die", "Insulinresistenz")
-)
+descriptions <- get_descriptions()
 ```
 
 Reaven und Miller [[ref]](https://doi.org/10.1007/BF00423145) wendeten in Anlehnung an Friedman und Rubin (1967) eine Clusteranalyse auf die drei primären Variablen an und identifizierten drei Cluster: "normal", "chemical" und "overt" diabetsiche Probanden. Die Variable `group` enthält die Klassifizierungen der Probanden in diese drei Gruppen. 
@@ -495,6 +490,34 @@ Da PCA1 und PCA2 bereits 82% der totalen Streuung erklären, können zwei maxima
 
 iii) Transformation der ursprünglichen Daten in ein PC-Koordinatensystem mit zwei PCs. Vergleichen Sie die Darstellung mit dem Ergebnis der LDA (LD1 und LD2 Projektionen).
 
+Im Folgenden werden zuerst die LDA Projektionen der kombinierten Daten aus Training und Test gezeigt.
+
+```{r}
+# Add group information to lda_m1.p$x and lda_pred$x
+lda_m1.p$x$group <- trainData$group
+lda_pred$x$group <- testData$group
+
+# Add a new variable to indicate the data source
+lda_m1.p$x$data_source <- "Training Data"
+lda_pred$x$data_source <- "Test Data"
+
+# Combine the data frames
+combined_data <- rbind(lda_m1.p$x, lda_pred$x)
+
+# Create the combined plot
+combined_plot <- ggplot(combined_data, aes(x = LD1, y = LD2, color = group)) +
+  geom_point(aes(shape = data_source)) +
+  ggtitle("LDA Projections (All Data)") +
+  xlab("LD1") +
+  ylab("LD2") +
+  theme_minimal()
+
+print(combined_plot)
+
+```
+
+Nun machen wir einen Vergleich zwischen den LDA-Projektionen und den PCA-Projektionen.
+
 ```{r}
 # Perform PCA
 pca_result <- prcomp(diabetes[sapply(diabetes, is.numeric)], scale. = TRUE)
@@ -506,8 +529,74 @@ PC2_scores <- pca_result$x[,2]
 # Create a new data frame with the scores of the first two PCs
 transformed_data <- data.frame(PC1 = PC1_scores, PC2 = PC2_scores)
 
+# Add group information to the transformed data
+transformed_data$group <- diabetes$group
+
+
+# First plot (PCA scatter plot)
+plot1 <- ggplot(transformed_data, aes(x = PC1, y = PC2, color = group)) +
+  geom_point() +
+  xlim(-10, 10) +
+  ylim(-5, 5) +
+  xlab("PC1") +
+  ylab("PC2") +
+  ggtitle("PCA Scatter plot") +
+  theme_minimal()
+
+# This plot is commented out because it only shows the training data
+
+# Seconde plot (LDA scatter plot)
+# plot2 <- ggplot(lda_m1.p$x, aes(x = LD1, y = LD2, color = trainData$group)) +
+#   geom_point() +
+#   xlim(-10, 10) +
+#   ylim(-5, 5) +
+#   ggtitle("LDA Projections (Training Data)") +
+#   xlab("LD1") +
+#   ylab("LD2") +
+#   theme_minimal()
+
+# Second plot (LDA scatter plot)
+plot2 <- ggplot(combined_data, aes(x = LD1, y = LD2, color = group)) +
+  geom_point(aes(shape = data_source)) +
+  xlim(-10, 10) +
+  ylim(-5, 5) +
+  ggtitle("LDA Projections (All Data)") +
+  xlab("LD1") +
+  ylab("LD2") +
+  theme_minimal()
+
+grid.arrange(plot1, plot2, ncol = 2)
+
 # Print the transformed data
-print(transformed_data)
+# print(transformed_data)
+```
+
+
+
+```{r}
+# #lda Trennung darstellen
+# # Partition Plot
+# partimat(group ~ glucose + fpg + insulin + sspg + rw,
+#          data = diabetes.pre, method = "lda",
+#          image.colors = c("aquamarine", "gray", "darkorange"))
+
+# # Projektionen
+# lda_m1.p$x #LD1 und LD2
+
+# # lda_m1.p$x als data.frame
+# lda_m1.p$x <- as.data.frame(lda_m1.p$x)
+
+# #projektionen graphisch darstellen
+# ggplot(lda_m1.p$x, aes(x = LD1, y = LD2, color = trainData$group)) +
+#   geom_point() +
+#   ggtitle("LDA Projektionen (Trainingsdaten)") +
+#   xlab("LD1") +
+#   ylab("LD2") +
+#   theme_minimal()
+
+# # Histogramme der Projektionen
+# ldahist(lda_m1.p$x[,1], g = trainData$group,type = "both")
+# ldahist(lda_m1.p$x[,2], g = trainData$group, type = "both")
 
 ```
 
@@ -548,3 +637,274 @@ insulin korreliert gut erkennbar negativ mit PCA1, während fpg und glucose leic
 
 
 iiiii) Wiederholen Sie die LDA von Aufgabe 1 unter Verwendung der PCs zur Klassifizierung. Achten Sie auf die Verwendung der gleichen Trainings- und Test-Daten und vergleichen Sie die Performance. Vergleichen Sie weiters die Performance der LDA mit den Variablen `glucose` und `fpg` mit der PCA+LDA mit zwei PCs.
+
+# Diskriminanzanalyse mit PCA Scores
+Führen Sie eine Diskriminanzanalyse unter Berücksichtigung folgender Punkte durch:
+
+i) Explorative Analyse der Prädiktoren mit Hilfe von Histogrammen. Gibt es Prädiktoren, die bereits eine gute Trennung zwischen den Klassen erlauben?
+
+```{r}
+# Datensatz laden
+diabetes <- read.csv("diabetes_RM.csv")
+
+# Perform PCA
+pca_result <- prcomp(diabetes[sapply(diabetes, is.numeric)], scale. = TRUE)
+
+# Extract the scores of the first two PCs
+PC1 <- pca_result$x[,1]
+PC2 <- pca_result$x[,2]
+
+# Create a new data frame with the scores of the first two PCs
+pca_scores <- data.frame(PC1 = PC1, PC2 = PC2)
+
+# Add labels to PCA scores
+pca_scores$group <- diabetes$group
+
+# Assuming `pca_scores` is a data frame with your PCA scores
+# and `group` is a factor variable indicating the group of each observation
+
+# Calculate means of principal components for each group
+aggregate(cbind(PC1, PC2) ~ group, pca_scores, mean)
+
+# Create histograms
+# You would need to define or adapt the `create_histograms()` function to work with PCA scores
+create_histograms(pca_scores)
+```
+
+Anhand der Histogramme lässt sich PC2 nicht als Trennungskriterium verwenden, da die Gruppen sich überlappen.
+Allerdings lässt ich die "overt" Gruppe bei PC1 Scores gut von den anderen Gruppen abgrenzen.
+
+
+ii) Überprüfen Sie ob die Vorraussetzungen für eine LDA gegeben sind und führen Sie eine Standardisierung der Daten durch.
+
+```{r}
+# Überprüfen der Voraussetzungen
+
+descriptions <- get_descriptions()
+
+# Normalverteilung der Prädiktoren (Visuell u. Konservativ)
+
+print("p-Werte des Shapiro-Wilk-Tests: ")
+for (i in 1:2) {
+  
+  #Shapiro-Wilk-Test
+  sw_p <- shapiro.test(pca_scores[,i])$p.value
+  print(paste("p-Wert für", colnames(pca_scores)[i], ":", sw_p))
+  
+  
+  par(mfrow = c(1,2))
+  # Histogramme
+  hist(pca_scores[,i], main = colnames(pca_scores)[i], xlab = "")
+
+  # QQ-Plots
+  qqnorm(pca_scores[,i])
+  qqline(pca_scores[,i])
+  
+}
+
+# Überprüfung der Multivariaten Normalverteilung
+mvn_test <- MVN::mvn(pca_scores[, sapply(pca_scores, is.numeric)], mvnTest = "hz")
+print(mvn_test)
+
+```
+
+In den Histogrammen und QQ-Plots ist zu erkennen, dass die PC2 Scores normalverteilt sind (p-Wert>0.05),
+allerdings sind die PC1 Scores keineswegs normalverteilt (p-Wert nahezu 0).
+
+Die Prädiktoren 'sspg' und 'rw' sind hingegen annähernd normalverteilt.
+```{r}
+# Transformieren der Daten
+pca_scores_trans <- pca_scores %>%
+  mutate(PC1 = log(PC1 - min(PC1) + 1),
+         PC2 = log(PC2 - min(PC2) + 1),
+         group = as.factor(group))
+
+# Überprüfung der Transformation
+pairs.panels(pca_scores_trans[,1:2],
+             gap = 0,
+             bg = c("green","red","blue")[pca_scores_trans$group],
+             pch = 21)
+```
+Auch der Multivariate Normalverteilungstest zeigt, dass die Daten nicht multivariat normalverteilt sind.
+
+Selbst nach der Transformation der Daten sind die PC Scores noch immer nicht normalverteilt. Die Diskriminanzanalyse wird dennoch durchgeführt, da sie robust gegenüber Verletzungen der Normalverteilung ist.
+
+```{r}
+# Korrelationen
+cor_matrix <- cor(pca_scores[,1:2])
+print(cor_matrix)
+```
+
+Die Korrelationsmatrix zeigt, dass der Prädiktor 'glucose' eine starke positive Korrelation mit den Prädiktoren 'fpg'(0.96) und 'sspg'(0.77) aufweist.
+
+```{r} 
+# Kovarianzen
+cov_matrix <- cov(pca_scores[,1:2])
+print(cov_matrix)
+
+```
+
+```{r}
+# Überprüfung der Homogenität der Kovarianzen
+boxM_test <- boxM(pca_scores[, sapply(pca_scores, is.numeric)], pca_scores$group)
+print(boxM_test)
+```
+
+Der Box-M-Test zeigt, dass die Kovarianzmatrizen der Gruppen nicht gleich sind. Dies bedeutet, dass die Annahme der Homogenität der Kovarianzmatrizen verletzt ist.
+Streng genommen sind die Voraussetzungen für eine LDA nicht gegeben. Da die LDA in Klassifizierungsaufgaben jedoch robust gegenüber Verletzungen der Normalverteilung und Homogenität der Kovarianzen ist, wird die LDA dennoch durchgeführt.
+
+PCA Scores von standardisierten Daten sollten nicht nochmal standardisiert werden.
+
+iii) Unterteilen sie die gesamten Daten in Trainings- und Test-Daten und führen Sie in der weiteren Folge eine Klassifizierung mit einer LDA durch. Evaluieren Sie die Perfomance der Klassifizierung und stellen Sie die Ergebnisse graphisch dar (Darstellung der Projektionen, Partition Plot).
+
+```{r}
+# Splitten der Daten in Trainings- und Testdaten (80/20)
+set.seed(42) # Für Reproduzierbarkeit
+
+trainIndex <- sample(1:145, 0.8 * 145, replace = FALSE)
+trainData <- pca_scores[ trainIndex,]
+testData  <- pca_scores[-trainIndex,]
+
+# Splitten der transformierten Daten
+set.seed(42) 
+trainIndex <- sample(1:145, 0.8 * 145, replace = FALSE)
+trainData_t <- pca_scores_trans[ trainIndex,]
+testData_t <- pca_scores_trans[-trainIndex,]
+```
+
+Nachdem die Daten in Trainings- und Testdaten aufgeteilt wurden, wird die LDA durchgeführt.
+
+```{r}
+# LDA (Daten ohne Transformation)
+lda_m1 <- lda(group ~ PC1 + PC2, data = trainData)
+# LDA (Daten mit Transformation)
+lda_m2 <- lda(group ~ PC1 + PC2, data = trainData_t)
+
+# Zusammenfassung des Modells
+lda_m1
+lda_m2
+
+# Klasse der Trainingsdaten vorhersagen
+lda_m1.p <- predict(lda_m1, newdata = trainData)
+lda_m2.p <- predict(lda_m2, newdata = trainData_t)
+
+head(lda_m1.p$posterior)
+head(lda_m1.p$class)
+    
+# Genauigkeit des Modells überprüfen
+print(paste("Model 1 (PCs):",mean(lda_m1.p$class == trainData$group)))
+print(paste("Model 2 (trans. PCs):",mean(lda_m2.p$class == trainData_t$group)))
+
+```
+
+Da durch das Modell mit den transformierten Daten eine höhere Genauigkeit erreicht werden konnte, wird neben dem Model 1 auch dieses Modell für die weitere Analyse und Klassifikation der Testdaten verwendet. 
+
+```{r}
+#lda Trennung darstellen
+
+# Group variable to factor
+trainData$group <- as.factor(trainData$group)
+
+
+# Partition Plot
+partimat(group ~ PC1 + PC2,
+         data = trainData, method = "lda",
+         image.colors = c("aquamarine", "gray", "darkorange"))
+
+# Projektionen
+lda_m1.p$x #LD1 und LD2
+
+# lda_m1.p$x als data.frame
+lda_m1.p$x <- as.data.frame(lda_m1.p$x)
+
+#projektionen graphisch darstellen
+ggplot(lda_m1.p$x, aes(x = LD1, y = LD2, color = trainData$group)) +
+  geom_point() +
+  ggtitle("LDA Projektionen (Trainingsdaten)") +
+  xlab("LD1") +
+  ylab("LD2") +
+  theme_minimal()
+
+# Histogramme der Projektionen
+ldahist(lda_m1.p$x[,1], g = trainData$group,type = "both")
+ldahist(lda_m1.p$x[,2], g = trainData$group, type = "both")
+```
+
+
+Die Klassifikationsgenauigkeit von Modell 1 beträgt auf den Testdaten 93%. Somit performt das Modell auf den Testdaten etwas besser als auf den Trainingsdaten, da diese nur zu 90% richtig klassifiziert wurden. Erstaunlich ist, dass der anfänglich untersuchte, explorative Ansatz einer Klassifikation über einen einfachen Schwellwert der Glucose-Variable zu einer höheren Klassifikationsgenauigkeit führte. 
+
+Das Modell 2, welches die transformierten Daten verwendet, erreicht auf den Testdaten eine Klassifikationsgenauigkeit von 90% und auf den Trainingsdaten eine Genauigkeit von 93%. 
+
+
+```{r}
+# Prediction on test data
+lda_pred <- predict(lda_m1, newdata = testData)
+
+# Check the head of the posterior probabilities and predicted classes
+head(lda_pred$posterior)
+head(lda_pred$class)
+
+# Check the accuracy of the model
+ac_lda <- mean(lda_pred$class == testData$group) # 93%
+
+# Projections of the test data 
+lda_pred$x #LD1 and LD2
+
+# Convert lda_m1.p$x to a data.frame
+lda_pred$x <- as.data.frame(lda_pred$x)
+
+# Graphical representation of the projections
+ggplot(lda_pred$x, aes(x = LD1, y = LD2, color = testData$group)) +
+  geom_point() +
+  ggtitle("LDA Projections (Test Data)") +
+  xlab("LD1") +
+  ylab("LD2") +
+  theme_minimal()
+
+
+# Histograms of the projections
+ldahist(lda_pred$x[,1], g = testData$group, type = "both")
+# ldahist(lda_pred$x[,2], g = testData$group, type = "both")
+
+# The ldahist method is not suitable LDA2 because there are too few unique observations in the groups.
+# Adjusting the bin width parameter h couldn't solve the problem.
+# Therefore, we us ggplot instead.
+ggplot(lda_pred$x, aes(x=LD2, fill=testData$group)) +
+  geom_histogram(position="identity", alpha=0.5, bins=30) +
+  theme_minimal() +
+  xlab("LD2") +
+  ylab("Count") +
+  ggtitle("Histogram of LD2 Projections")
+```
+
+
+iiii) Vergleichen Sie unterschiedliche Varianten der Diskriminanzanalyse (QDA, MDA, FDA) hinsichtlich ihrer Klassifikationsgenauigkeit.
+
+```{r}
+# QDA
+m_qda <- qda(group ~ PC1 + PC2, data = trainData)
+m_qda.p <- predict(m_qda, newdata = testData)
+ac_qda <- mean(m_qda.p$class == testData$group)
+
+# MDA
+library(mda)
+m_mda <- mda(group ~ PC1 + PC2, data = trainData)
+m_mda.p <- predict(m_mda, newdata = testData)
+ac_mda <- mean(m_mda.p == testData$group)
+
+# FDA
+m_fda <- fda(group ~ PC1 + PC2, data = trainData)
+m_fda.p <- predict(m_fda, newdata = testData)
+ac_fda <- mean(m_fda.p == testData$group)
+
+# RDA
+m_rda <- rda(group ~ PC1 + PC2, data = trainData)
+m_rda.p <- predict(m_rda, newdata = testData)
+ac_rda <- mean(m_rda.p$class == testData$group)
+
+# Table
+results <- data.frame(Model = c("QDA", "MDA", "FDA", "RDA"),
+                      Accuracy = c(ac_qda, ac_mda, ac_fda, ac_rda))
+print(results)
+```
+Sowohl die FDA als auch die RDA erreichen ebenfalls eine Klassifikationsgenauigkeit von 93% auf den Testdaten. Die QDA, MDA sowie die LDA mit transformierten Daten erreichen nur eine Genauigkeit von etwa 90%.

@@ -42,6 +42,19 @@ create_histograms <- function(data) {
 # Helper functions for the exercises
 ########################################################################################
 
+get_descriptions <- function() {
+  descriptions <- list(
+    c("rw: relatives Gewicht,", "Verhältnis zwischen aktuellem", "Gewicht und zu erwartendem Gewicht", "bei der Körpergröße"),
+    c("fpg: Nüchternglukoselevel", "im Plasma in mg/dl"),
+    c("glucose: Fläche unter Glukose-Antwort", "(mg/dl*h) nach 3h oralem", "Glukosetoleranztest (OGTT)"),
+    c("insulin: Fläche unter der Insulin-Antwort", "(mg/dl*h) nach OGTT"),
+    c("sspg: Steady-State-Plasmaglukose", "(mg/dl) als Maß für die", "Insulinresistenz")
+  )
+
+  return(descriptions)
+}
+
+
 # Function to remove outliers
 remove_extreme_outliers <- function(data, cols, threshold = 1.5) {
   for (col in cols) {
