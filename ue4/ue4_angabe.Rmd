@@ -460,7 +460,7 @@ print(cor_matrix)
 ```
 
 Die Kovarianzmatrix zeigt, dass es Korrelationen zwischen unterschiedlichen Variablen gibt:
-Nicht-Diagonal-Elemente ungleich 0.
+Nicht-Diagonal-Elemente sind ungleich 0.
 
 
 ii) Berechnen der PCA und Beurteilung wie viele PCs sinnvoll sind (Eigenwerte und Screeplot).
@@ -486,11 +486,11 @@ ggplot(data = scree_df, aes(x = PC, y = eigenvalues)) +
   labs(title = "Scree Plot", x = "Principal Component", y = "Eigenvalue")
 ```
 
-Da PCA1 und PCA2 bereits 82% der totalen Streuung erklären, können zwei (maximal 3 (96%)) PCs sinnvoll sein.
+Da PC1 und PC2 bereits 82% der totalen Streuung erklären, können zwei (maximal 3 (96%)) PCs sinnvoll sein.
 
 iii) Transformation der ursprünglichen Daten in ein PC-Koordinatensystem mit zwei PCs. Vergleichen Sie die Darstellung mit dem Ergebnis der LDA (LD1 und LD2 Projektionen).
 
-Im Folgenden werden zuerst die LDA Projektionen der kombinierten Daten aus Training und Test gezeigt.
+Im Folgenden werden zuerst die LD-Projektionen der kombinierten Daten aus Training und Test gezeigt.
 
 ```{r}
 # Add group information to lda_m1.p$x and lda_pred$x
@@ -516,7 +516,7 @@ print(combined_plot)
 
 ```
 
-Nun machen wir einen Vergleich zwischen den LDA-Projektionen und den PCA-Projektionen.
+Nun machen wir einen Vergleich zwischen den LD-Projektionen und den PC-Projektionen der gesamten Daten.
 
 ```{r}
 # Perform PCA
@@ -571,7 +571,9 @@ grid.arrange(plot1, plot2, ncol = 2)
 # print(transformed_data)
 ```
 
-Die Plots sehen sehr ähnlich aus, mit dem Unterschied, dass sie zueinander gespiegelt erscheinen.
+Die Plots lassen ein ähnliches Muster erkennen, mit dem Unterschied dass die PC2-Projektionen deutlich weniger Varianz aufweisen als die LD2-Projektionen.
+In iiii) wird sich zeigen, dass sich dieser Befund damit deckt, dass die LDA der PC-Projektionen eine geringere Genauigkeit erreicht als die LDA der ursprünglichen Daten.
+Dies ist einleuchtend, wenn man bedenkt, dass die LDA für das Auffinden der LDs die Labelinformationen nutzen kann, während die PCA lediglich die Varianz der Daten berücksichtigt.
 
 iii) Stellen Sie den Correlation Circle und Biplot graphisch dar. Welche Information liefert diese Darstellung?
 
@@ -588,30 +590,30 @@ fviz_pca_biplot(pca_result, col.var="#2E9FDF", col.ind="#696969")
 
 Correlation Circle:
 
-Die Länge der Vektoren (0 bis 1) zeigt die Stärke der Korrelation zwischen den Variablen und den PCA-Achsen.
-Die Normalprojektion der Vektoren auf die Achsen zeigt die Korrelation zwischen den Prädiktoren und den jeweiligen Achsen.
-Da die ersten zwei PCA-Dimensionsn etwa 82% der totalen Streuung erklären, sind die Vektoren hinreichend nahe bei 1.
-Am geringsten ist die Korrelation zwischen den Variablen rw und insulin und den PCA-Achsen, da sie die kürzesten Vektoren haben.
+Die Normalprojektionen der Vektoren auf die PC-Achsen zeigen die Korrelation zwischen den Prädiktoren und den jeweiligen PCs im Einzelnen.
+Die Länge der normierten Vektoren (0 bis 1) zeigt die Stärke der Korrelation zwischen einer Variable und den (zwei) PCs im Gesamten.
+Da die ersten zwei PC-Dimensionsn etwa 82% der totalen Streuung erklären, liegen die Längen der Vektoren hinreichend nahe bei 1.
+Am geringsten ist die Korrelation zwischen den Variablen rw und insulin und den PCs im Gesamten, da sie die kürzesten Vektoren haben.
 
 Biplot:
 
-Es ist gut erkennbar, dass die Streuung der Datenpunkte um die PCA1-Achse (55% der totalen Streuung) stärker ist 
-als die Streuung um die PCA2-Achse (28% der totalen Streuung). Die Vektoren der Variablen glucose und fpg zeigen
-in Richtung der PCA1-Achse, was für eine starke Korrelation zwischen diesen Variablen und der PCA1-Achse spricht.
-Dasselbe gilt für die Vektoren der Variablen insulin und rw für die PCA2-Achse.
+Es ist gut erkennbar, dass die Streuung der PC1-Projektionen (PC1 erfasst 55% der totalen Streuung) stärker ist 
+als die Streuung der PC2-Projektionen (PC2 erfasst 28% der totalen Streuung). Die Vektoren der Variablen glucose und fpg zeigen
+in Richtung der PC1-Achse, was für eine starke Korrelation zwischen diesen Variablen und PC1 spricht.
+Dasselbe gilt für die Vektoren der Variablen insulin und rw für die PC2.
 
 
 iiii) Beurteilen Sie die Qualität und Beiträge der Variablen auf die PCs.
 
-Die Variablen fpg, glucose und sspg tragen am stärksten zu den PCAs bei. glucose und fpg tragen am stärksten zu PCA1 bei.
-Bei fpg, glucose, sspg und rw besteht eine positive Korrelation zu PCA1.
-Die Variablen insulin und rw tragen am stärksten zu PCA2 bei und korrelieren positiv mit PCA2.
-insulin korreliert gut erkennbar negativ mit PCA1, während fpg und glucose leicht negativ mit PCA2 korrelieren.
+Die Variablen fpg, glucose und sspg tragen am stärksten zu den PCs im Gesamten bei. glucose und fpg tragen am stärksten zu PC1 bei.
+Bei fpg, glucose, sspg und rw besteht eine positive Korrelation zu PC1.
+Die Variablen insulin und rw korrelieren positiv mit PC2 und tragen am stärksten zu PC2 bei.
+Wie gut zu erkennen ist, korreliert insulin negativ mit PC1, während fpg und glucose leicht negativ mit PC2 korrelieren.
 
 
 iiiii) Wiederholen Sie die LDA von Aufgabe 1 unter Verwendung der PCs zur Klassifizierung. Achten Sie auf die Verwendung der gleichen Trainings- und Test-Daten und vergleichen Sie die Performance. Vergleichen Sie weiters die Performance der LDA mit den Variablen `glucose` und `fpg` mit der PCA+LDA mit zwei PCs.
 
-# Diskriminanzanalyse mit PCA Scores
+# Diskriminanzanalyse mit PC-Projektionen
 Führen Sie eine Diskriminanzanalyse unter Berücksichtigung folgender Punkte durch:
 
 i) Explorative Analyse der Prädiktoren mit Hilfe von Histogrammen. Gibt es Prädiktoren, die bereits eine gute Trennung zwischen den Klassen erlauben?
@@ -681,8 +683,8 @@ print(mvn_test)
 
 ```
 
-In den Histogrammen und QQ-Plots ist zu erkennen, dass die PC2 Scores normalverteilt sind (p-Wert>0.05),
-allerdings sind die PC1 Scores nicht normalverteilt (p-Wert nahezu 0).
+In den Histogrammen und QQ-Plots ist zu erkennen, dass die PC2-Projektionen normalverteilt sind (p-Wert>0.05),
+allerdings sind die PC1-Projektionen nicht normalverteilt (p-Wert nahezu 0).
 
 ```{r}
 # Transformieren der Daten
@@ -697,9 +699,10 @@ pairs.panels(pca_scores_trans[,1:2],
              bg = c("green","red","blue")[pca_scores_trans$group],
              pch = 21)
 ```
-Auch der Multivariate Normalverteilungstest zeigt, dass die Daten nicht multivariat normalverteilt sind.
 
-Selbst nach der log Transformation der Daten sind die PC Scores noch immer nicht normalverteilt. Die Diskriminanzanalyse wird dennoch durchgeführt, da sie robust gegenüber Verletzungen der Normalverteilung ist.
+Darüber hinaus zeigt der multivariate Normalverteilungstest, dass die Daten nicht multivariat normalverteilt sind.
+
+Auch nach der Log-Transformation der Daten sind die PC1-Projektionen nicht normalverteilt. Die LDA wird dennoch durchgeführt, da sie robust gegenüber Verletzungen der Normalverteilung ist.
 
 ```{r}
 # Korrelationen
@@ -715,7 +718,7 @@ print(cov_matrix)
 ```
 
 Die Korrelations/Kovarianzmatrix zeigt erwartungsgemäß, dass die Nicht-Diagonal-Elemente bei 0 liegen.
-Das ist so, weil die PC Vektoren eine orthogonale Basis bilden und daher nicht miteinander korrelieren.
+Das ist so, weil die PC-Vektoren eine orthogonale Basis bilden und daher nicht miteinander korrelieren.
 
 ```{r}
 # Überprüfung der Homogenität der Kovarianzen
@@ -726,7 +729,7 @@ print(boxM_test)
 Der Box-M-Test zeigt, dass die Kovarianzmatrizen der Gruppen nicht gleich sind. Dies bedeutet, dass die Annahme der Homogenität der Kovarianzmatrizen verletzt ist.
 Streng genommen sind die Voraussetzungen für eine LDA nicht gegeben. Da die LDA in Klassifizierungsaufgaben jedoch robust gegenüber Verletzungen der Normalverteilung und Homogenität der Kovarianzen ist, wird die LDA dennoch durchgeführt.
 
-PCA Scores von standardisierten Daten sollten nicht nochmal standardisiert werden.
+PC-Projektionen von standardisierten Daten sollten nicht nochmal standardisiert werden (weil es unnötig ist und zu verzerrten Ergebnissen führen kann).
 
 iii) Unterteilen sie die gesamten Daten in Trainings- und Test-Daten und führen Sie in der weiteren Folge eine Klassifizierung mit einer LDA durch. Evaluieren Sie die Perfomance der Klassifizierung und stellen Sie die Ergebnisse graphisch dar (Darstellung der Projektionen, Partition Plot).
 
@@ -734,6 +737,7 @@ iii) Unterteilen sie die gesamten Daten in Trainings- und Test-Daten und führen
 # Splitten der Daten in Trainings- und Testdaten (80/20)
 set.seed(42) # Für Reproduzierbarkeit
 
+# Splitten der Daten
 trainIndex <- sample(1:145, 0.8 * 145, replace = FALSE)
 trainData <- pca_scores[ trainIndex,]
 testData  <- pca_scores[-trainIndex,]
@@ -770,7 +774,7 @@ print(paste("Model 2 (trans. PCs):",mean(lda_m2.p$class == trainData_t$group)))
 
 ```
 
-Da durch das Modell mit den log transformierten Daten keine höhere Genauigkeit erreicht werden konnte, wird nur Model 1 auch für die weitere Analyse und Klassifikation der Testdaten herangezogen. 
+Da durch das Modell mit den log-transformierten Daten keine höhere Genauigkeit erreicht werden konnte, wird nur Model 1 für die weitere Analyse und Klassifikation der Testdaten herangezogen. 
 
 ```{r}
 #lda Trennung darstellen
@@ -802,7 +806,6 @@ ggplot(lda_m1.p$x, aes(x = LD1, y = LD2, color = trainData$group)) +
 ldahist(lda_m1.p$x[,1], g = trainData$group,type = "both")
 ldahist(lda_m1.p$x[,2], g = trainData$group, type = "both")
 ```
-
 
 Die Klassifikationsgenauigkeit von Modell 1 beträgt auf den Testdaten 75%. Somit performt das Modell auf den Testdaten schlechter als auf den Trainingsdaten, da diese zu 84% richtig klassifiziert wurden.
 
@@ -879,4 +882,4 @@ results <- data.frame(Model = c("QDA", "MDA", "FDA", "RDA"),
 print(results)
 ```
 
-Nur die FDA erreicht eine Klassifikationsgenauigkeit von etwa 83% wie die LDA auf den Testdaten. Alle anderen Modelle sind unterlegen.
+Nur die FDA erreicht eine Klassifikationsgenauigkeit von etwa 83% auf den Testdaten wie die LDA. Alle anderen Modelle sind unterlegen.
