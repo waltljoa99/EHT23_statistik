@@ -2,7 +2,6 @@
 title: "Vertiefende statistische Verfahren"
 subtitle: "4. Übungsblatt SS 2024"
 author: "Stefan Kolb, Joachim Waltl"
-
 output:
   pdf_document: default
   html_document:
@@ -102,8 +101,26 @@ load_source()
 Alle Aufgaben sind mit R zu lössen, wenn nicht explizit anders angegeben. Die Berechnungen sollen nachvollziehbar und dokumentiert sein. Um die vollständige Punktezahl zu erreichen, müssen alle Ergebnisse und Fragen entsprechend interpretiert bzw. beantwortet werden. Code alleine ist nicht ausreichend! Die Abgabe erfolgt über Moodle entsprechend der Abgaberichtlinien als pdf und Rmd File. Bitte inkludieren Sie namentlich alle beteiligten Gruppenmitglieder sowohl im Bericht als auch im Source Code.
 Die jeweiligen Datensätze die für diese Übung relevant sind finden Sie ebenfalls in Moodle.
 
-# (Aufgabe 1) Datensatz: Reaven and Miller Diabetes Daten
+# Datensatz: Reaven and Miller Diabetes Daten
 Verwenden Sie den Datensatz `diabetes_RM.csv`. Der Datensatz enthält fünf Messungen, die an 145 nicht adipösen erwachsenen Patienten durchgeführt wurden, die in drei Gruppen eingeteilt wurden.
+
+Die drei primären Variablen sind die Glukoseintoleranz, die Insulinantwort auf orale Glukose und die Insulinresistenz (gemessen durch die Steady-State-Plasmaglukose, die nach chemischer Suppression der endogenen Insulinsekretion bestimmt wird). Zwei zusätzliche Variablen, das relative Gewicht und die Nüchternplasmaglukose, sind ebenfalls enthalten. Zusammengefasst ergeben sich folgende Prädiktorvariablen:
+
+* `rw`: relatives Gewicht, Verhältnis zwischen aktuellem Gewicht und zu erwartendem Gewicht bei der Körpergröße
+* `fpg`: Nüchternglukoselevel im Plasma in mg/dl 
+* `glucose`: Fläche unter Glukose-Antwort (mg/dl*h) nach 3h oralem Glukosetoleranztest (OGTT) 
+* `insulin`: Fläche unter der Insulin-Antwort (mg/dl*h) nach OGTT
+* `sspg`: Steady-State-Plasmaglukose (mg/dl) als Maß für die Insulinresistenz
+
+```{r}
+# Variable Beschreibungen
+descriptions <- get_descriptions()
+```
+
+Reaven und Miller [[ref]](https://doi.org/10.1007/BF00423145) wendeten in Anlehnung an Friedman und Rubin (1967) eine Clusteranalyse auf die drei primären Variablen an und identifizierten drei Cluster: "normal", "chemical" und "overt" diabetsiche Probanden. Die Variable `group` enthält die Klassifizierungen der Probanden in diese drei Gruppen. 
+
+# 1 Diskriminanzanalyse [5P]
+Führen Sie eine Diskriminanzanalyse unter Berücksichtigung folgender Punkte durch:
 
 ```{r}
 # Datensatz laden
@@ -123,26 +140,7 @@ pairs.panels(diabetes[1:5],
              gap = 0,
              bg = c("green","red","blue")[diabetes$group],
              pch = 21)
-
-
 ```
-Die drei primären Variablen sind die Glukoseintoleranz, die Insulinantwort auf orale Glukose und die Insulinresistenz (gemessen durch die Steady-State-Plasmaglukose, die nach chemischer Suppression der endogenen Insulinsekretion bestimmt wird). Zwei zusätzliche Variablen, das relative Gewicht und die Nüchternplasmaglukose, sind ebenfalls enthalten. Zusammengefasst ergeben sich folgende Prädiktorvariablen:
-
-* `rw`: relatives Gewicht, Verhältnis zwischen aktuellem Gewicht und zu erwartendem Gewicht bei der Körpergröße
-* `fpg`: Nüchternglukoselevel im Plasma in mg/dl 
-* `glucose`: Fläche unter Glukose-Antwort (mg/dl*h) nach 3h oralem Glukosetoleranztest (OGTT) 
-* `insulin`: Fläche unter der Insulin-Antwort (mg/dl*h) nach OGTT
-* `sspg`: Steady-State-Plasmaglukose (mg/dl) als Maß für die Insulinresistenz
-
-```{r}
-# Variable Beschreibungen
-descriptions <- get_descriptions()
-```
-
-Reaven und Miller [[ref]](https://doi.org/10.1007/BF00423145) wendeten in Anlehnung an Friedman und Rubin (1967) eine Clusteranalyse auf die drei primären Variablen an und identifizierten drei Cluster: "normal", "chemical" und "overt" diabetsiche Probanden. Die Variable `group` enthält die Klassifizierungen der Probanden in diese drei Gruppen. 
-
-# 1 Diskriminanzanalyse [5P]
-Führen Sie eine Diskriminanzanalyse unter Berücksichtigung folgender Punkte durch:
 
 i) Explorative Analyse der Prädiktoren mit Hilfe von Histogrammen. Gibt es Prädiktoren, die bereits eine gute Trennung zwischen den Klassen erlauben?
 
@@ -157,7 +155,7 @@ aggregate(cbind(glucose,insulin,fpg,sspg,rw)~group,diabetes,mean)
 # Histogramme
 create_histograms(diabetes)
 ```
-Anhand der Histogramme lässt sich kein Prädiktor identifizieren, der eine klare Trennung zwischen den Klassen erlaubt. Am ehesten ist beim Prädiktor 'glucose' eine Abgrenzung der Gruppen zu erkennen.
+Anhand der Histogramme lässt sich kein Prädiktor identifizieren, der eine gute Trennung zwischen den Klassen erlaubt. Am ehesten ist beim Prädiktor 'glucose' eine Abgrenzung der Gruppen erkennbar. Zur explorativen Trennung der Gruppen wird daher der Prädiktor 'glucose' mit manuell festgelegten Schwellwerten verwendet.
 
 ```{r}
 # Explorativer Ansatz zur Trennung der Gruppen
@@ -215,9 +213,10 @@ print(mvn_test)
 
 ```
 
-In den Histogrammen und QQ-Plots ist zu erkennen, dass die Prädiktoren 'glucose', 'fpg' und 'insulin' deutliche Abweichungen von der Normalverteilung aufweisen. Ihre Verteilungen zeigen eine starke Rechtsschiefe und in den QQ-Plots sind deutliche Abweichungen von der Normalverteilung ersichtlich, insbesondere in den oberen Quantilen.
-
+In den Histogrammen und QQ-Plots ist zu erkennen, dass die Prädiktoren 'glucose', 'fpg' und 'insulin' deutliche Abweichungen von der Normalverteilung aufweisen. Ihre Verteilungen zeigen eine starke Rechtsschiefe und auch in den QQ-Plots sind deutliche Abweichungen von der Normalverteilung ersichtlich, insbesondere in den oberen Quantilen.
+Auch der Multivariate Normalverteilungstest zeigt, dass die Daten nicht multivariat normalverteilt sind.
 Die Prädiktoren 'sspg' und 'rw' sind hingegen annähernd normalverteilt.
+
 ```{r}
 # Transformieren der Daten
 diabetes_trans <- diabetes %>%
@@ -235,7 +234,6 @@ pairs.panels(diabetes_trans[1:5],
              pch = 21)
 
 ```
-Auch der Multivariate Normalverteilungstest zeigt, dass die Daten nicht multivariat normalverteilt sind.
 
 Selbst nach der Transformation der Daten sind die Prädiktoren 'glucose', 'fpg' und 'insulin' noch immer nicht normalverteilt. Die Diskriminanzanalyse wird dennoch durchgeführt, da sie robust gegenüber Verletzungen der Normalverteilung ist.
 
@@ -342,7 +340,7 @@ partimat(group ~ glucose + fpg + insulin + sspg + rw,
          image.colors = c("aquamarine", "gray", "darkorange"))
 
 # Projektionen
-lda_m1.p$x #LD1 und LD2
+head(lda_m1.p$x) #LD1 und LD2
 
 # lda_m1.p$x als data.frame
 lda_m1.p$x <- as.data.frame(lda_m1.p$x)
@@ -883,3 +881,126 @@ print(results)
 ```
 
 Nur die FDA erreicht eine Klassifikationsgenauigkeit von etwa 83% auf den Testdaten wie die LDA. Alle anderen Modelle sind unterlegen.
+
+# Bonus: Iris Datensatz
+In diesem Abschnitt wird die Diskriminanzanalyse auf dem Iris-Datensatz durchgeführt. Der Iris-Datensatz enthält 150 Beobachtungen von Iris-Blumen. Jede Beobachtung enthält die Länge und Breite des Kelchblattes und des Kronblattes. Die Blumen gehören zu einer von drei Arten: Setosa, Versicolor oder Virginica.
+
+Ziel der Aufgabe ist es, für einen neuen vermessenen Datensatz von Iris-Blumen die Art der Blume vorherzusagen.
+
+Dafür wurden folgende Daten erhoben:
+```{r}
+new_data <- data.frame(Sepal.Length = c(7.2, 6.5),
+                       Sepal.Width = c(3.2, 2.8),
+                       Petal.Length = c(5.5, 5),
+                       Petal.Width = c(2, 2))
+new_data
+```
+Verwenden Sie ein auf LDA basierendes Klassifizierungsmodell um die vorliegende Iris
+Klasse zu bestimmen.
+Welche Spezies liegt hier vor? Ist das Ergebnis plausibel?
+
+```{r}
+# Iris data
+data(iris)
+
+str(iris)
+
+# Species in group umbenennen
+iris$group <- as.factor(iris$Species)
+
+# Tabelle
+aggregate(cbind(Sepal.Length, Sepal.Width, Petal.Length, Petal.Width) ~ Species, data = iris, mean)
+
+# Histogramme
+create_histograms(iris)
+
+# Explorativer Ansatz zur Trennung der Gruppen
+# Grenzen anhand des Prädiktors 'petal.width' 
+grenzen <- c(0.8,1.625)
+
+ggplot(iris, aes(x = Petal.Width, fill = group)) +
+    geom_histogram(position = "identity", alpha = 0.5, bins = 30) +
+    labs(x = "petal.width", y = "Count", fill = "group") +
+    # Grenze einfügen
+    geom_vline(xintercept = grenzen, linetype = "dashed", color = "black") +
+    theme_minimal()
+
+# Explorative Klassifizierung der Gruppen
+iris$group_K1<- ifelse(iris$Petal.Width < grenzen[1], "setosa", 
+                       ifelse(iris$Petal.Width < grenzen[2], "versicolor", "virginica"))
+
+iris$group_K1 <- as.factor(iris$group_K1)
+
+# Genauigkeit der Klassifizierung
+mean(as.factor(iris$group_K1) == iris$group)
+
+# Explorative Klassifizierung der neuen Daten
+group_K1 <- ifelse(new_data$Petal.Width < grenzen[1], "setosa", 
+                            ifelse(new_data$Petal.Width < grenzen[2], "versicolor", "virginica"))
+
+
+
+# standardize and split the data
+iris_pp <- preProcess(iris[,1:4], method = c("center", "scale"))
+iris_std <- predict(iris_pp, iris[,1:4])
+iris_std$group <- iris$group
+
+# Train-Test-Split
+set.seed(42)
+trainIndex <- sample(1:nrow(iris), 0.8 * nrow(iris))
+trainData <- iris_std[trainIndex,]
+testData <- iris_std[-trainIndex,]
+
+# LDA
+m_lda <- lda(group ~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width, data = trainData)
+m_lda
+
+# Partition Plot
+library(klaR)
+partimat(group~Sepal.Width+Sepal.Length+Petal.Width+Petal.Length,
+         data = iris_std,method="lda", 
+         image.colors =c("aquamarine","gray","darkorange"))
+
+
+
+# Klassifikation der Testdaten
+m_lda.p <- predict(m_lda, newdata = testData)
+head(m_lda.p$posterior)
+head(m_lda.p$class)
+
+# Genauigkeit
+ac_lda <- mean(m_lda.p$class == testData$group)
+
+# Standardisierung der neuen Daten
+new_data_std <- predict(iris_pp, new_data)
+
+# Vorhersage der neuen Daten
+new_data$group_Klda <- predict(m_lda, newdata = new_data)$class
+iris_pred <- predict(m_lda, newdata = new_data_std)
+
+# Add highest Probability of class membership to new_data
+new_data$prob <- apply(iris_pred$posterior, 1, max)
+
+# Projektionen der Testdaten 
+m_lda.p$x #LD1 und LD2
+
+# lda_m1.p$x als data.frame
+m_lda.p$x <- as.data.frame(m_lda.p$x)
+
+# projektionen graphisch darstellen
+ggplot(m_lda.p$x, aes(x = LD1, y = LD2, color = testData$group)) +
+    geom_point() +
+    labs(x = "LD1", y = "LD2", color = "group") +
+    theme_minimal()
+
+
+# Histogramme der Projektionen
+ldahist(m_lda.p$x[,1], g = testData$group,type = "both")
+ldahist(m_lda.p$x[,2], g = testData$group, type = "both")
+
+# Ergebnisse
+print(new_data)
+
+```
+
+Antwort: Die vorliegenden Daten entsprechen der Spezies 'virginica'. Das Ergebnis ist plausibel, da die Wahrscheinlichkeit für die Spezies 'virginica' bei beiden Beobachtungen über 99% liegt. Die Genauigkeit der Klassifikation auf dem Testdatensatz beträgt über 96%.
