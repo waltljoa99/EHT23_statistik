@@ -16,7 +16,7 @@ output:
 # Helfer Funktionen für alle Nutzer laden
 
 # Set relative path to target working directory
-rel_path_to_target_dir <- "ue4"
+rel_path_to_target_dir <- "ue5"
 # Helper file name
 rel_path_from_target_dir_to_helper_file <- "helper.R"
 
@@ -52,32 +52,12 @@ if (!checkIDEisRStudio()) {
 }
 
 # Load packages
-load("pROC")
-load("caret")
-load("ResourceSelection")
-load("foreign")
-load("haven")
-load("tidyverse")
-load("car")
-load("MVN")
-load("ggplot2")
-load("stats")
-load("ROCit")
-load("ggpubr")
-load("nparLD")
-load("rcompanion")
-load("FSA")
-load("MASS")
-load("dplyr")
-load("heplots")
-load("klaR")
-load("mda")
-load("biotools")
-load("psych")
-load("FactoMineR")
+load("cluster")
 load("factoextra")
-load("gridExtra")
-
+load("clusterCrit")
+load("fpc")
+load("mclust")
+load("dplyr")
 
 # Function to source helper file
 load_source <- function() {
@@ -114,6 +94,180 @@ Verwenden Sie den Datensatz `diabetes_RM.csv`. Der Datensatz enthält fünf Mess
 * Stellen Sie die Ergebnisse grafisch dar (Scatter Plot).
 * Welches Verfahren ist am besten geeignet?
 * Finden Sie für k-means die optimale Anzahl an Cluster, und beurteilen Sie ob sich die Ground Truth Clusterstruktur reproduzieren lässt.
+
+```{r setup, include=FALSE}
+
+# Load the data
+diabetes <- read.csv("diabetes_RM.csv", header = TRUE, sep = ",")
+
+# Calculate the means of the groups
+group_means <- aggregate(. ~ group, diabetes, mean)
+
+# Print the group means
+print(group_means)
+
+
+
+
+# Check the column names in the dataframe
+print(colnames(diabetes))
+
+# Preprocess the data
+# Make sure the column names match the ones in your dataframe
+diabetes_scaled <- scale(diabetes[, c("rw", "fpg", "glucose", "insulin", "sspg")])
+
+# Perform k-means clustering
+kmeans_result <- kmeans(diabetes_scaled, centers = 3)
+```
+
+
+```{r}
+groups <- c("normal", "chemical", "overt")
+associate_clusters_with_groups(diabetes, "group", groups)
+```
+
+
+```{r}
+# Perform k-medoids clustering
+kmedoids_result <- pam(diabetes_scaled, k = 3)
+
+# Perform hierarchical clustering
+hclust_result <- cutree(hclust(dist(diabetes_scaled)), k = 3)
+
+# Perform hierarchical k-means clustering
+hclust_kmeans_result <- cutree(hclust(kmeans_result$centers), k = 3)
+
+# Perform model-based clustering
+mclust_result <- Mclust(diabetes_scaled, G = 3)
+
+# Compare the accuracy of the clustering results with the ground truth
+kmeans_accuracy <- sum(kmeans_result$cluster == diabetes$group) / nrow(diabetes)
+kmedoids_accuracy <- sum(kmedoids_result$clustering == diabetes$group) / nrow(diabetes)
+hclust_accuracy <- sum(hclust_result == diabetes$group) / nrow(diabetes)
+hclust_kmeans_accuracy <- sum(hclust_kmeans_result == diabetes$group) / nrow(diabetes)
+mclust_accuracy <- sum(mclust_result$classification == diabetes$group) / nrow(diabetes)
+
+# Print the accuracy results
+cat("k-means accuracy: ", kmeans_accuracy, "\n")
+cat("k-medoids accuracy: ", kmedoids_accuracy, "\n")
+cat("Hierarchical clustering accuracy: ", hclust_accuracy, "\n")
+cat("Hierarchical k-means accuracy: ", hclust_kmeans_accuracy, "\n")
+cat("Model-based clustering accuracy: ", mclust_accuracy, "\n")
+```
+
+```{r}
+
+levels = c("chemical", "normal", "overt")
+
+# Convert the group names to factors
+diabetes$group <- factor(diabetes$group, levels = levels)
+# Convert the factors to numerical values
+diabetes$group <- as.numeric(diabetes$group)
+
+kmeans_accuracy <- sum(kmeans_result$cluster == diabetes$group) / nrow(diabetes)
+kmeans_accuracy
+
+kmeans_result$cluster
+```
+
+```{r}
+# Load the data
+diabetes <- read.csv("diabetes_RM.csv", header = TRUE, sep = ",")
+
+levels = c("chemical", "normal", "overt")
+
+# Convert the group names to factors
+diabetes$group <- factor(diabetes$group, levels = levels)
+# Convert the factors to numerical values
+
+
+# Calculate the means of the groups
+diabetes_group_means <- aggregate(. ~ group, diabetes, mean)
+
+# Drop group column
+diabetes_group_means <- dplyr::select(diabetes_group_means, -group)
+
+
+# Perform k-means clustering
+kmeans_result <- kmeans(diabetes_scaled, centers = 3)
+
+# Drop the 'group' column from the diabetes dataframe
+diabetes_clusters <- dplyr::select(diabetes, -group)
+
+diabetes_clusters$cluster <- kmeans_result$cluster
+
+# Calculate the means of the groups
+diabetes_clusters_means <- aggregate(. ~ cluster, diabetes_clusters, mean)
+
+# Initialize an empty vector to store the levels
+clusters <- c()
+
+# Loop over all rows of diabetes_clusters_means
+for (i in 1:nrow(diabetes_clusters_means)) {
+  # Get the i-th row of the dataframe
+  cluster_mean_vector <- diabetes_clusters_means[i, ]
+  
+  # Overwrite all rows with the i-th row
+  cluster_mean_matrix <- do.call("rbind", replicate(nrow(diabetes_clusters_means), cluster_mean_vector, simplify = FALSE))
+  
+  # Drop cluster column
+  cluster_mean_matrix <- dplyr::select(cluster_mean_matrix, -cluster)
+  
+  # Calculate the squared differences
+  differences <- (cluster_mean_matrix - diabetes_group_means)^2
+  
+  # Calculate the Euclidean distances
+  euclidian_distances <- sqrt(rowSums(differences))
+  
+  # Find the level corresponding to the smallest distance
+  clusters[i] <- which.min(euclidian_distances)
+
+}
+levels
+clusters
+
+
+
+# Define the known centers of your groups
+#known_centers <- list("group1" = group_means[1,], "group2" = group_means[2,], "group3" = group_means[3,])
+
+
+
+
+
+# Calculate the Euclidean distance between the k-means centers and the known centers
+# distances <- sapply(names(known_centers), function(group) {
+#   rowSums((t(kmeans_result$centers) - known_centers[[group]])^2)
+# })
+
+# # Assign the labels based on the minimum distance
+# labels <- apply(distances, 2, which.min)
+
+# # Replace the k-means labels with the new labels
+# kmeans_result$cluster <- labels[kmeans_result$cluster]
+```
+
+
+```{r}
+# Perform k-means clustering
+kmeans_result <- kmeans(diabetes_scaled, centers = 3)
+
+# Define the known centers of your groups and ensure all elements are numeric
+known_centers <- do.call(rbind, lapply(group_means, function(x) as.numeric(x)))
+rownames(known_centers) <- c("group1", "group2", "group3")
+
+# Calculate the Euclidean distance between the k-means centers and the known centers
+distances <- apply(kmeans_result$centers, 1, function(kmeans_center) {
+  sqrt(rowSums((t(known_centers) - kmeans_center)^2))
+})
+
+# Transpose the distances matrix for easier interpretation
+distances <- t(distances)
+
+# Print distances
+print(distances)
+
+```
 
 # 2 Clustering - Breast Cancer [4P]
 Brustkrebs ist weltweit die häufigste bösartige Erkrankung bei Frauen und eine der Hauptursachen für krebsbedingte Todesfälle sowohl in Entwicklungs- als auch in Industrieländern. Verwenden Sie den Datensatz `breast_cancer.csv`. Die Merkmale werden aus einem digitalisierten Bild eines Feinnadelaspirats einer Brustmasse berechnet. Sie beschreiben Merkmale der im Bild vorhandenen Zellkerne. Das Zielmerkmal erfasst die Prognose gutartig (B) oder bösartig (M) und dient hier als Ground Truth. Achten Sie auf uninformative Features (z.B. ID) und fehlende Daten (Missing Values).
