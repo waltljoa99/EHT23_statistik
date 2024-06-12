@@ -95,6 +95,12 @@ Verwenden Sie den Datensatz `diabetes_RM.csv`. Der Datensatz enthält fünf Mess
 * Welches Verfahren ist am besten geeignet?
 * Finden Sie für k-means die optimale Anzahl an Cluster, und beurteilen Sie ob sich die Ground Truth Clusterstruktur reproduzieren lässt.
 
+```{r}
+
+
+```
+
+
 ```{r setup, include=FALSE}
 # Load the data
 diabetes <- read.csv("diabetes_RM.csv", header = TRUE, sep = ",")
@@ -102,15 +108,11 @@ groups <- c("normal", "chemical", "overt")
 # Preprocess the data
 # Make sure the column names match the ones in your dataframe
 diabetes_scaled <- scale(diabetes[, c("rw", "fpg", "glucose", "insulin", "sspg")])
+
+
 # Perform k-means clustering
 kmeans_result <- kmeans(diabetes_scaled, centers = 3)
 
-calculate_accuracy(diabetes, kmeans_result, groups)
-
-```
-
-
-```{r}
 # Perform k-medoids clustering
 kmedoids_result <- pam(diabetes_scaled, k = 3)
 
@@ -118,40 +120,66 @@ kmedoids_result <- pam(diabetes_scaled, k = 3)
 hclust_result <- cutree(hclust(dist(diabetes_scaled)), k = 3)
 
 # Perform hierarchical k-means clustering
-hclust_kmeans_result <- cutree(hclust(kmeans_result$centers), k = 3)
+hclust_kmeans_result <- cutree(hclust(kmeans_result$cluster), k = 3)
 
 # Perform model-based clustering
 mclust_result <- Mclust(diabetes_scaled, G = 3)
 
-# Compare the accuracy of the clustering results with the ground truth
-kmeans_accuracy <- sum(kmeans_result$cluster == diabetes$group) / nrow(diabetes)
-kmedoids_accuracy <- sum(kmedoids_result$clustering == diabetes$group) / nrow(diabetes)
-hclust_accuracy <- sum(hclust_result == diabetes$group) / nrow(diabetes)
-hclust_kmeans_accuracy <- sum(hclust_kmeans_result == diabetes$group) / nrow(diabetes)
-mclust_accuracy <- sum(mclust_result$classification == diabetes$group) / nrow(diabetes)
+
+kmeans_accuracy <- calculate_accuracy(diabetes, kmeans_result$cluster, groups)
+kmedoids_accuracy <- calculate_accuracy(diabetes, kmedoids_result$cluster, groups)
+hclust_accuracy <- calculate_accuracy(diabetes, hclust_result, groups)
+#hclust_kmeans_accuracy <- calculate_accuracy(diabetes, hclust_kmeans_result, groups)
+# https://www.datanovia.com/en/lessons/hierarchical-k-means-clustering-optimize-clusters/
+
+mclust_accuracy <- calculate_accuracy(diabetes, mclust_result$classification, groups)
+
+
 
 # Print the accuracy results
 cat("k-means accuracy: ", kmeans_accuracy, "\n")
 cat("k-medoids accuracy: ", kmedoids_accuracy, "\n")
 cat("Hierarchical clustering accuracy: ", hclust_accuracy, "\n")
-cat("Hierarchical k-means accuracy: ", hclust_kmeans_accuracy, "\n")
+#cat("Hierarchical k-means accuracy: ", hclust_kmeans_accuracy, "\n")
 cat("Model-based clustering accuracy: ", mclust_accuracy, "\n")
 ```
 
+
 ```{r}
+# Perform hierarchical clustering
+hclust_result <- cutree(hclust(dist(diabetes_scaled)), k = 3)
+length(hclust_result)
 
-levels = c("chemical", "normal", "overt")
-
-# Convert the group names to factors
-diabetes$group <- factor(diabetes$group, levels = levels)
-# Convert the factors to numerical values
-diabetes$group <- as.numeric(diabetes$group)
-
-kmeans_accuracy <- sum(kmeans_result$cluster == diabetes$group) / nrow(diabetes)
-kmeans_accuracy
-
-kmeans_result$cluster
+kmedoids_result$cluster
+hclust_result
+hclust_kmeans_result
 ```
+
+```{r}
+# Define a recursive function for hierarchical k-means clustering
+hierarchical_kmeans <- function(data, k) {
+  # Base case: if k is 1, return the data as a single cluster
+  if (k <= 1) {
+    return(rep(1, nrow(data)))
+  }
+  
+  # Apply k-means clustering to divide the data into k clusters
+  kmeans_result <- kmeans(data, centers = k)
+  
+  # Recursively apply the function to each cluster, adjusting the cluster numbers as necessary
+  cluster_assignments <- numeric(nrow(data))
+  for (i in 1:k) {
+    cluster_assignments[kmeans_result$cluster == i] <- hierarchical_kmeans(data[kmeans_result$cluster == i, ], k = floor(k / 2)) + (i - 1) * floor(k / 2)
+  }
+  
+  return(cluster_assignments)
+}
+
+# Apply the function to your data
+hclust_kmeans_result <- hierarchical_kmeans(diabetes_scaled, k = 3)
+hclust_kmeans_result
+```
+
 
 # 2 Clustering - Breast Cancer [4P]
 Brustkrebs ist weltweit die häufigste bösartige Erkrankung bei Frauen und eine der Hauptursachen für krebsbedingte Todesfälle sowohl in Entwicklungs- als auch in Industrieländern. Verwenden Sie den Datensatz `breast_cancer.csv`. Die Merkmale werden aus einem digitalisierten Bild eines Feinnadelaspirats einer Brustmasse berechnet. Sie beschreiben Merkmale der im Bild vorhandenen Zellkerne. Das Zielmerkmal erfasst die Prognose gutartig (B) oder bösartig (M) und dient hier als Ground Truth. Achten Sie auf uninformative Features (z.B. ID) und fehlende Daten (Missing Values).

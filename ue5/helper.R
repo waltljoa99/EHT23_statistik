@@ -45,11 +45,11 @@ create_histograms <- function(data) {
 #' Calculate the accuracy of clustering
 #'
 #' @param group_data data.frame: data frame containing the original group labels
-#' @param result_data list: list containing the clustering results
+#' @param cluster list: list containing the clustering results
 #' @param groups character: vector containing the names of the groups
 #'
 #' @return accuracy of the clustering results compared to the original group labels
-calculate_accuracy <- function(group_data, result_data, groups) {
+calculate_accuracy <- function(group_data, cluster, groups) {
   # Convert the group names to factors
   group_data$group <- factor(group_data$group, levels = groups)
 
@@ -57,7 +57,7 @@ calculate_accuracy <- function(group_data, result_data, groups) {
   group_means <- aggregate(. ~ group, group_data, mean)
 
   # Create a data frame containing the cluster means
-  cluster_means <- get_cluster_means(group_data, result_data)
+  cluster_means <- get_cluster_means(group_data, cluster)
 
   # Initialize an empty vector to store the groups
   clusters <- c()
@@ -91,7 +91,7 @@ calculate_accuracy <- function(group_data, result_data, groups) {
   group <- recode(group_data$group, !!!recode_vector)
 
   # Compare the accuracy of the clustering results with the ground truth
-  accuracy <- sum(result_data$cluster == group) / nrow(group_data)
+  accuracy <- sum(cluster == group) / nrow(group_data)
 
   return(accuracy)
 }
@@ -99,16 +99,16 @@ calculate_accuracy <- function(group_data, result_data, groups) {
 #' Calculate the means of the clusters
 #'
 #' @param group_data data.frame: data frame containing the original group labels
-#' @param result_data list: list containing the clustering results.
+#' @param cluster: list containing the clustering results.
 #'
 #' @return data.frame: data frame containing the means of each cluster.
-get_cluster_means <- function(group_data, result_data) {
+get_cluster_means <- function(group_data, cluster) {
   # Drop the 'group' column from the dataframe
   # This is done because we want to calculate the means of the clusters, not the original groups
   cluster_data <- dplyr::select(group_data, -group)
 
   # Add the cluster assignments to the dataframe
-  cluster_data$cluster <- result_data$cluster
+  cluster_data$cluster <- cluster
 
   # Calculate the means of the clusters
   # The aggregate function is used to calculate the mean of each variable for each cluster
