@@ -9,7 +9,7 @@ output:
   word_document: default
 ---
 
-```{r setup, include=FALSE}
+```{r, include=FALSE}
 ## Run this chunk ALWAYS first !
 # Arbeitsverzeichnis für VSC Nutzer korrekt setzen
 # Nötige Packages installieren und laden
@@ -58,6 +58,8 @@ load("clusterCrit")
 load("fpc")
 load("mclust")
 load("dplyr")
+load("ggplot2")
+load("dbscan")
 
 # Function to source helper file
 load_source <- function() {
@@ -96,12 +98,6 @@ Verwenden Sie den Datensatz `diabetes_RM.csv`. Der Datensatz enthält fünf Mess
 * Finden Sie für k-means die optimale Anzahl an Cluster, und beurteilen Sie ob sich die Ground Truth Clusterstruktur reproduzieren lässt.
 
 ```{r}
-
-
-```
-
-
-```{r setup, include=FALSE}
 # Load the data
 diabetes <- read.csv("diabetes_RM.csv", header = TRUE, sep = ",")
 groups <- c("normal", "chemical", "overt")
@@ -193,6 +189,174 @@ Brustkrebs ist weltweit die häufigste bösartige Erkrankung bei Frauen und eine
 * Welches Verfahren ist am besten geeignet?
 * Stellen Sie die Ergebnisse grafisch dar (Scatter Plot z.B. radius_mean vs. texture_mean).
 * Lässt sich das Ergebnis verbessern, wenn vor dem Clustering der Merkmalsraum mittels PCA reduziert wird? Vergleichen Sie die Ergebnisse mit den vorherigen Resultaten.
+
+```{r}
+# Load the data
+breast_cancer <- read.csv("breast_cancer.csv", header = TRUE, sep = ",")
+str(breast_cancer)
+summary(breast_cancer)
+
+# check for missing values
+sum(is.na(breast_cancer))
+
+# Preprocess the data
+# Remove the diagnosis column (ground truth)
+breast_cancer_scaled <- scale(breast_cancer[, -c(1)])
+breast_cancer_scaled <- as.data.frame(breast_cancer_scaled)
+
+# Perform k-means clustering
+kmeans_result <- kmeans(breast_cancer_scaled, centers = 2, nstart = 12)
+groups <- kmeans_result$cluster
+groups <- car::recode(groups, "1='M'; 2='B'", as.factor = TRUE)
+
+table(breast_cancer$diagnosis, groups)
+acc_kmeans <- mean(breast_cancer$diagnosis==groups)
+
+cat("Accuracy of k-means clustering: ", acc_kmeans, "\n")
+
+# Visualize the clusters (radius_mean vs. texture_mean)
+ggplot(breast_cancer, aes(x = texture_mean, y = radius_mean, color = groups)) +
+  geom_point() +
+  labs(title = "k-means Clustering", color = "Cluster") +
+  theme_minimal()
+
+# Perform k-medoids clustering (PAM)
+ncl.pam<-cluster::pam(breast_cancer_scaled,k = 2)
+
+groups<-ncl.pam$clustering
+groups
+
+groups<-car::recode(groups,recodes="1='M';2='B'",as.factor = T)
+acc_kmediod <- mean(breast_cancer$diagnosis==groups)
+
+# Visualize the clusters (area_mean vs. smoothness_mean)
+ggplot(breast_cancer, aes(x = area_mean, y = smoothness_mean, color = groups)) +
+  geom_point() +
+  labs(title = "k-mediods Clustering", color = "Cluster") +
+  theme_minimal()
+
+```
+
+Interpretation: Die k-means-Clustering-Methode hat eine Genauigkeit von 0,9103, was bedeutet, dass 91% der Daten dem korrekten Cluster zugeordnet wurden. Die Genauigkeit kann in unserem Fall ermittelt werden, da wir die Ground-Truth-Informationen haben.
+Die Visualisierung anhand der Merkmale `texture_mean` und `radius_mean` zeigt, dass die Cluster stark überlappen und diese zufällig gewählten Merkmale eine geringe Trennschärfe aufweisen.
+
+Beim k-medoids-Clustering beträgt die Genauigkeit 0,8910. Im Vergleich zu k-means ist die Genauigkeit etwas niedriger, aber immer noch relativ hoch. Die Visualisierung anhand der Merkmale `area_mean` und `smoothness_mean` zeigt ebenfalls eine starke Überlappung der Cluster.
+
+```{r}
+# Perform hierarchical clustering
+hclust <- hclust(dist(breast_cancer_scaled), method = "ward.D2")
+plot(hclust,cex=0.6, hang = -1)
+# Cluster einzeichnen
+rect.hclust(hclust, k = 2, border = "red")
+# Cluster zuweisen
+groups <- cutree(hclust, k = 2)
+groups <- car::recode(groups, "1='M'; 2='B'", as.factor = TRUE)
+
+acc_hclust <- mean(breast_cancer$diagnosis==groups)
+
+```
+Das hierarchische Clustering hat erfolgreich zwei Hauptcluster identifiziert, die mit einer Genauigkeit von 88% den tatsächlichen Diagnosen (benign vs. malignant) entsprechen. Dies deutet darauf hin, dass durch hierarchisches Clustering eine klare Trennung der Datenpunkte möglicht ist.
+Die Genauigkeit ist jedoch etwas niedriger als bei k-means und k-medoids.
+
+```{r}
+# Perform model-based clustering
+mclust_result <- Mclust(breast_cancer_scaled, G = 2)
+groups <- mclust_result$classification
+groups <- car::recode(groups, "1='M'; 2='B'", as.factor = TRUE)
+
+acc_mclust <- mean(breast_cancer$diagnosis==groups)
+
+```
+
+Das modellbasierte Clustering hat eine Genauigkeit von 0,8910, was der Genauigkeit des k-mediod-Clustering entspricht. Dies deutet darauf hin, dass das modellbasierte Clustering in diesem Fall ähnlich effektiv ist wie k-medoids. Die Visualisierung zeigt eine klare Trennung der Cluster anhand der Merkmale `texture_mean` und `radius_mean`.
+
+```{r}
+# Perform DBSCAN clustering
+set.seed(123)
+dbscan_result <- dbscan(breast_cancer_scaled, eps = 5, MinPts = 50)
+groups <- dbscan_result$cluster
+groups <- car::recode(groups, "0='M'; 1='B'", as.factor = TRUE)
+
+acc_dbscan <- mean(breast_cancer$diagnosis==groups)
+
+# Berechnung der k-Nächste-Nachbarn-Distanz für k = MinPts
+kNNdistplot(breast_cancer_scaled, k = 5)  # Hier setzen wir k = MinPts (Startwert)
+abline(h = 0.5, col = "red", lty = 2)
+
+```
+
+DBSCAN scheint für diesen Datensatz nicht optimal zu sein, um zwei Cluster (benign vs. malignant) zu identifizieren. Unabhängig von den Parametern (eps, MinPts) konnte immer nur ein Cluster und Rauschen identifiziert werden. Die ermittelte Genauigkeit beträgt demnach nur 0.6432.
+Alternative Methoden wie k-Means und hierarchisches Clustering könnten somit besser geeignet sein, um die Daten in zwei Hauptcluster zu unterteilen.
+
+
+```{r}
+# Accuracy comparison
+accuracy <- c(acc_kmeans, acc_kmediod, acc_hclust, acc_mclust, acc_dbscan)
+method <- c("k-means", "k-medoids", "hierarchical", "model-based", "DBSCAN")
+accuracy_df <- data.frame(method, accuracy)
+accuracy_df
+
+```
+Die Untersuchung unterschiedlicher Clustering-Methoden auf den Brustkrebsdatensatz zeigt, dass das k-Means-Verfahren mit einer Genauigkeit von 91% am besten abschneidet. Das k-Medoids-Verfahren und das modellbasierte Clustering folgen dicht dahinter mit einer Genauigkeit von jeweils etwa 89%. Hierarchisches Clustering zeigt ebenfalls gute Ergebnisse mit einer Genauigkeit von 88%. Im Vergleich dazu zeigt DBSCAN eine deutlich geringere Genauigkeit von 64%, was darauf hinweist, dass dieses Verfahren für den gegebenen Datensatz weniger geeignet ist.
+
+Jetzt wird überprüft, ob durch eine vorhergehende PCA eine bessere Trennung der Cluster erreicht werden kann.
+
+
+```{r}
+# Dimensionality Reduction with PCA
+pca_result <- prcomp(breast_cancer_scaled, scale. = TRUE)
+summary(pca_result)
+
+# create a data frame with the first 10 principal components
+pca_data <- data.frame(pca_result$x[, 1:10])
+
+# k-Means Clustering
+set.seed(123)
+kmeans_pca <- kmeans(pca_data, centers = 2, nstart = 20)
+groups.kmeans_pca <- kmeans_pca$cluster
+groups.kmeans_pca <- car::recode(groups.kmeans_pca, "1='B'; 2='M'", as.factor = TRUE)
+
+# k-Medoids Clustering
+kmedoids_pca <- pam(pca_data, k = 2)
+groups.kmedoids_pca <- kmedoids_pca$clustering
+groups.kmedoids_pca <- car::recode(groups.kmedoids_pca, "1='M'; 2='B'", as.factor = TRUE)
+
+# Hierarchisches Clustering
+dist_pca <- dist(pca_data)
+hc_pca <- hclust(dist_pca, method = "ward.D2")
+groups.hc_pca <- cutree(hc_pca, k = 2)
+groups.hc_pca <- car::recode(groups.hc_pca, "1='M'; 2='B'", as.factor = TRUE)
+
+
+# Modell-basiertes Clustering
+mbc_pca <- Mclust(pca_data, G = 2)
+groups.mbc_pca <- mbc_pca$classification
+groups.mbc_pca <- car::recode(groups.mbc_pca, "1='M'; 2='B'", as.factor = TRUE)
+
+# DBSCAN Clustering
+dbscan_pca <- dbscan(pca_data, eps = 5, MinPts = 50)
+groups.dbscan_pca <- dbscan_pca$cluster
+groups.dbscan_pca <- car::recode(groups.dbscan_pca, "0='B'; 1='M'", as.factor = TRUE)
+
+# Berechnung der Genauigkeiten
+acc_kmeans_pca <- mean(breast_cancer$diagnosis == groups.kmeans_pca)
+acc_kmedoids_pca <- mean(breast_cancer$diagnosis == groups.kmedoids_pca)
+acc_hc_pca <- mean(breast_cancer$diagnosis == groups.hc_pca)
+acc_mbc_pca <- mean(breast_cancer$diagnosis == groups.mbc_pca)
+acc_dbscan_pca <- mean(breast_cancer$diagnosis == groups.dbscan_pca)
+
+# Accuracy comparison
+accuracy_pca <- c(acc_kmeans_pca, acc_kmedoids_pca, acc_hc_pca, acc_mbc_pca, acc_dbscan_pca)
+method_pca <- c("k-means", "k-medoids", "hierarchical", "model-based", "DBSCAN")
+accuracy_df_pca <- data.frame(method_pca, accuracy_pca)
+accuracy_df_pca
+
+# visualize the clusters of kmeans with PCA - Dimensionality Reduction
+fviz_cluster(object=kmeans_pca, data=breast_cancer_scaled,ellipse.type = "norm",repel = F) + ggtitle("k-Means Clustering with PCA")
+
+```
+Die Auswirkung der PCA auf die Genauigkeit der Clusteranalyse zeigt große Unterschiede bei den einzelnen Methoden. Während sich die Genauigkeit des k-Means-Verfahrens nicht verbessert hat, zeigt die k-Medoids eine Verbesserung von 89.1% auf 91.38%. Die hierarchische Clusteranalyse zeigt die stärkste Verbesserung, mit einem Sprung von 88% auf 91.92%. Im Gegensatz dazu zeigt das modellbasierte Clustering eine deutliche Verschlechterung der Genauigkeit von 89.1% auf 63.62%. Offenbar ist das modellbasierte Clustering weniger gut geeignet, um die Daten in zwei Hauptcluster zu unterteilen, nachdem die Dimensionalität reduziert wurde. 
+
 
 # 3 Clustering - Heart Disease Patients [3P]
 Verwenden Sie den Datensatz `heart_disease_patients.csv`. Der Datensatz enthält anonymisierte Daten von Patienten, bei denen eine Herzerkrankung diagnostiziert wurde. Patienten mit ähnlichen Merkmalen könnten auf die gleichen Behandlungen ansprechen, und Ärzte könnten davon profitieren, etwas über die Behandlungsergebnisse von Patienten zu erfahren, die denen ähneln, die sie behandeln. Zu diesem Zweck führen Sie bitte eine Clusteranalyse durch. Vergleichen Sie unterschiedliche Algorithmen und versuchen Sie ein bestmögliches Ergebnis zu erreichen. Begründen Sie ihre Entscheidungen. Verwenden Sie nur numerische Merkmale und achten Sie auf uninformative Features und fehlende Daten. Versuchen Sie die resultierenden Cluster zu interpretieren.
