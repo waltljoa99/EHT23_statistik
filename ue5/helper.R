@@ -50,6 +50,16 @@ create_histograms <- function(data) {
 #'
 #' @return accuracy of the clustering results compared to the original group labels
 calculate_accuracy <- function(group_data, cluster, groups) {
+  # Recode the group labels to match the cluster assignments
+  group <- recode_group_to_cluster(group_data, cluster, groups)
+
+  # Compare the accuracy of the clustering results with the ground truth
+  accuracy <- sum(cluster == group) / nrow(group_data)
+
+  return(accuracy)
+}
+
+recode_group_to_cluster <- function(group_data, cluster, groups) {
   # Convert the group names to factors
   group_data$group <- factor(group_data$group, levels = groups)
 
@@ -59,12 +69,30 @@ calculate_accuracy <- function(group_data, cluster, groups) {
   # Create a data frame containing the cluster means
   cluster_means <- get_cluster_means(group_data, cluster)
 
-  # Initialize an empty vector to store the groups
-  clusters <- c()
-
   # Drop group column
   group_means <- dplyr::select(group_means, -group)
   cluster_means <- dplyr::select(cluster_means, -cluster)
+
+  # # Loop over all rows of group_means
+  # for (i in 1:nrow(group_means)) {
+  #   # Get the i-th row of the dataframe
+  #   group_means_row <- group_means[i, ]
+
+  #   # Overwrite all rows with the i-th row
+  #   group_means_rows <- do.call("rbind", replicate(nrow(group_means), group_means_row, simplify = FALSE))
+
+  #   # Calculate the squared differences
+  #   differences <- (group_means_rows - cluster_means)^2
+
+  #   # Calculate the Euclidean distances
+  #   euclidian_distances <- sqrt(rowSums(differences))
+
+  #   # Find the cluster mean with the shortest distance to the given group mean
+  #   clusters <- recursive_function(euclidian_distances, clusters)
+  # }
+
+  # Initialize an empty matrix to store the Euclidean distances
+  euclidian_distances_matrix <- matrix(nrow = nrow(group_means), ncol = nrow(cluster_means))
 
   # Loop over all rows of group_means
   for (i in 1:nrow(group_means)) {
@@ -80,9 +108,20 @@ calculate_accuracy <- function(group_data, cluster, groups) {
     # Calculate the Euclidean distances
     euclidian_distances <- sqrt(rowSums(differences))
 
-    # Find the cluster mean with the smallest distance to the given group mean
-    clusters[i] <- which.min(euclidian_distances)
+    # Store the Euclidean distances in the matrix
+    euclidian_distances_matrix[i, ] <- euclidian_distances
   }
+
+  print(euclidian_distances_matrix)
+
+  # Find the lowest sum of n elements in an nxn matrix where all of these elements share
+  # neither the same column index nor the same row index
+  # Did not work as expected. Not the best accuarcies are yielded
+  # clusters <- get_clusters_3(euclidian_distances_matrix) # --> playground
+
+  clusters <- get_clusters_0(euclidian_distances_matrix)
+
+  print(clusters)
 
   # Create a named vector for recoding
   recode_vector <- setNames(clusters, groups)
@@ -90,11 +129,41 @@ calculate_accuracy <- function(group_data, cluster, groups) {
   # Recode the 'group' variable to the matching cluster
   group <- recode(group_data$group, !!!recode_vector)
 
-  # Compare the accuracy of the clustering results with the ground truth
-  accuracy <- sum(cluster == group) / nrow(group_data)
-
-  return(accuracy)
+  return(group)
 }
+
+# Simple but sufficiently effective method
+get_clusters_0 <- function(euclidian_distances_matrix) {
+  clusters <- c()
+
+  # Loop over all rows of the matrix
+  for (i in 1:nrow(euclidian_distances_matrix)) {
+    # Get the i-th row of the matrix
+    row <- euclidian_distances_matrix[i, ]
+
+    # Find the index of the minimum value in the row
+    cluster_candidate <- which.min(row)
+
+    continue <- TRUE
+
+    while (continue) {
+      # If the cluster_candidate is already in clusters
+      if (cluster_candidate %in% clusters) {
+        # Remove the cluster_candidate from the row
+        row[cluster_candidate] <- NA
+        # Find the index of the minimum value in the row
+        cluster_candidate <- which.min(row)
+      } else {
+        # If the cluster_candidate is not in clusters, append it to clusters
+        clusters <- c(clusters, cluster_candidate)
+        continue <- FALSE
+      }
+    }
+  }
+
+  return(clusters)
+}
+
 
 #' Calculate the means of the clusters
 #'
@@ -116,4 +185,26 @@ get_cluster_means <- function(group_data, cluster) {
 
   # Return the means of the clusters
   return(cluster_means)
+}
+
+create_scatter_plot <- function(group_data, cluster, cluster_name, accuracy_result, groups, ignore) {
+  group_data$group <- recode_group_to_cluster(group_data, cluster, groups)
+
+  # Add the cluster labels to the data frame
+  group_data$cluster <- cluster
+
+  # Add a column to the data frame that indicates whether each data point was correctly labeled
+  group_data$correctly_labeled <- ifelse(group_data$cluster == group_data$group, "Correct", "Incorrect")
+
+  if (!ignore) {
+    print(group_data)
+  }
+
+
+  ggplot(group_data, aes(x = fpg, y = glucose, color = as.factor(cluster), shape = correctly_labeled)) +
+    geom_point() +
+    scale_shape_manual(values = c("Correct" = 19, "Incorrect" = 4)) +
+    labs(color = "Cluster", shape = "Correctly Labeled") +
+    theme_minimal() +
+    ggtitle(paste("Scatter plot of fpg vs glucose: ", cluster_name, " (Accuracy: ", 100 * round(accuracy_result, 2), "%)", sep = ""))
 }

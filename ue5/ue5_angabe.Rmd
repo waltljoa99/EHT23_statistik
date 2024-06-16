@@ -52,6 +52,7 @@ if (!checkIDEisRStudio()) {
 }
 
 # Load packages
+load("clue")
 load("cluster")
 load("factoextra")
 load("clusterCrit")
@@ -99,6 +100,8 @@ Verwenden Sie den Datensatz `diabetes_RM.csv`. Der Datensatz enthält fünf Mess
 * Finden Sie für k-means die optimale Anzahl an Cluster, und beurteilen Sie ob sich die Ground Truth Clusterstruktur reproduzieren lässt.
 
 ```{r}
+load_source()
+
 # Load the data
 diabetes <- read.csv("diabetes_RM.csv", header = TRUE, sep = ",")
 groups <- c("normal", "chemical", "overt")
@@ -136,11 +139,48 @@ mclust_result <- Mclust(diabetes_scaled_cols, G = 3)
 
 
 
-kmeans_accuracy <- calculate_accuracy(diabetes_scaled, kmeans_result$cluster, groups)
-kmedoids_accuracy <- calculate_accuracy(diabetes_scaled, kmedoids_result$cluster, groups)
-hclust_accuracy <- calculate_accuracy(diabetes_scaled, hclust_result, groups)
-hkmeans_accuracy <- calculate_accuracy(diabetes_scaled, hkmeans_result$cluster, groups)
-mclust_accuracy <- calculate_accuracy(diabetes_scaled, mclust_result$classification, groups)
+kmeans_cluster <- kmeans_result$cluster
+kmedoids_cluster <- kmedoids_result$cluster
+hclust_cluster <- hclust_result
+hkmeans_cluster <- hkmeans_result$cluster
+mclust_cluster <- mclust_result$classification
+
+
+
+# Create a named vector for recoding
+recode_vector <- setNames(1:length(groups), groups)
+
+# Recode the 'group' variable to the matching cluster
+ground_truth <- recode(diabetes$group, !!!recode_vector)
+
+#ground_truth <- diabetes$group
+
+# Create a list of the cluster results
+cluster_list <- list(ground_truth = ground_truth,
+                     kmeans = kmeans_cluster, 
+                     kmedoids = kmedoids_cluster, 
+                     hclust = hclust_cluster, 
+                     hkmeans = hkmeans_cluster, 
+                     mclust = mclust_cluster)
+
+
+
+kmeans_accuracy <- calculate_accuracy(diabetes_scaled, kmeans_cluster, groups)
+kmedoids_accuracy <- calculate_accuracy(diabetes_scaled, kmedoids_cluster, groups)
+hclust_accuracy <- calculate_accuracy(diabetes_scaled, hclust_cluster, groups)
+hkmeans_accuracy <- calculate_accuracy(diabetes_scaled, hkmeans_cluster, groups)
+mclust_accuracy <- calculate_accuracy(diabetes_scaled, mclust_cluster, groups)
+
+
+# Put the results into a list
+accuracy_results <- list(
+  ground_truth = 1,
+  kmeans = kmeans_accuracy,
+  kmedoids = kmedoids_accuracy,
+  hclust = hclust_accuracy,
+  hkmeans = hkmeans_accuracy,
+  mclust = mclust_accuracy
+)
 
 
 
@@ -151,6 +191,7 @@ cat("Hierarchical clustering accuracy: ", hclust_accuracy, "\n")
 cat("Hierarchical k-means accuracy: ", hkmeans_accuracy, "\n")
 cat("Model-based clustering accuracy: ", mclust_accuracy, "\n")
 ```
+
 
 Grafische Darstellung
 
@@ -209,6 +250,43 @@ fviz_pca_var(pca_result, col.var="contrib", gradient.cols = c("#00AFBB", "#E7B80
 fviz_pca_biplot(pca_result, col.var="#2E9FDF", col.ind="#696969")
 ```
 
+```{r}
+load_source()
+
+# Load the data
+diabetes <- read.csv("diabetes_RM.csv", header = TRUE, sep = ",")
+groups <- c("normal", "chemical", "overt")
+
+
+
+# Scale the selected columns
+diabetes_scaled_cols <- scale(diabetes[, c("rw", "fpg", "glucose", "insulin", "sspg")])
+
+# Create a new data frame from the scaled columns
+diabetes_scaled_df <- as.data.frame(diabetes_scaled_cols)
+
+# Set the row names of the scaled data frame to match the row names of the original data frame
+rownames(diabetes_scaled_df) <- rownames(diabetes)
+
+# Bind the scaled columns with the unscaled columns
+diabetes_scaled <- cbind(diabetes_scaled_df, group = diabetes$group)
+
+ignore <- TRUE
+# Loop over the list and create a scatter plot for each set of cluster labels
+for (name in names(cluster_list)) {
+  if(name == "hclust") {
+    ignore <- FALSE
+  }
+  plot(create_scatter_plot(diabetes_scaled,
+      cluster_list[[name]], name, accuracy_results[[name]],
+      groups,
+      ignore))
+
+  ignore <- TRUE
+}
+
+
+```
 
 
 # 2 Clustering - Breast Cancer [4P]
