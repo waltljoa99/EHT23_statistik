@@ -58,6 +58,7 @@ load("clusterCrit")
 load("fpc")
 load("mclust")
 load("dplyr")
+load("klaR")
 load("ggplot2")
 load("dbscan")
 
@@ -101,34 +102,45 @@ Verwenden Sie den Datensatz `diabetes_RM.csv`. Der Datensatz enthält fünf Mess
 # Load the data
 diabetes <- read.csv("diabetes_RM.csv", header = TRUE, sep = ",")
 groups <- c("normal", "chemical", "overt")
-# Preprocess the data
-# Make sure the column names match the ones in your dataframe
-diabetes_scaled <- scale(diabetes[, c("rw", "fpg", "glucose", "insulin", "sspg")])
+
+
+
+# Scale the selected columns
+diabetes_scaled_cols <- scale(diabetes[, c("rw", "fpg", "glucose", "insulin", "sspg")])
+
+# Create a new data frame from the scaled columns
+diabetes_scaled_df <- as.data.frame(diabetes_scaled_cols)
+
+# Set the row names of the scaled data frame to match the row names of the original data frame
+rownames(diabetes_scaled_df) <- rownames(diabetes)
+
+# Bind the scaled columns with the unscaled columns
+diabetes_scaled <- cbind(diabetes_scaled_df, group = diabetes$group)
+
 
 
 # Perform k-means clustering
-kmeans_result <- kmeans(diabetes_scaled, centers = 3)
+kmeans_result <- kmeans(diabetes_scaled_cols, centers = 3)
 
 # Perform k-medoids clustering
-kmedoids_result <- pam(diabetes_scaled, k = 3)
+kmedoids_result <- pam(diabetes_scaled_cols, k = 3)
 
 # Perform hierarchical clustering
-hclust_result <- cutree(hclust(dist(diabetes_scaled)), k = 3)
+hclust_result <- cutree(hclust(dist(diabetes_scaled_cols)), k = 3)
 
 # Perform hierarchical k-means clustering
-hclust_kmeans_result <- cutree(hclust(kmeans_result$cluster), k = 3)
+hkmeans_result <-hkmeans(diabetes_scaled_cols, 3)
 
 # Perform model-based clustering
-mclust_result <- Mclust(diabetes_scaled, G = 3)
+mclust_result <- Mclust(diabetes_scaled_cols, G = 3)
 
 
-kmeans_accuracy <- calculate_accuracy(diabetes, kmeans_result$cluster, groups)
-kmedoids_accuracy <- calculate_accuracy(diabetes, kmedoids_result$cluster, groups)
-hclust_accuracy <- calculate_accuracy(diabetes, hclust_result, groups)
-#hclust_kmeans_accuracy <- calculate_accuracy(diabetes, hclust_kmeans_result, groups)
-# https://www.datanovia.com/en/lessons/hierarchical-k-means-clustering-optimize-clusters/
 
-mclust_accuracy <- calculate_accuracy(diabetes, mclust_result$classification, groups)
+kmeans_accuracy <- calculate_accuracy(diabetes_scaled, kmeans_result$cluster, groups)
+kmedoids_accuracy <- calculate_accuracy(diabetes_scaled, kmedoids_result$cluster, groups)
+hclust_accuracy <- calculate_accuracy(diabetes_scaled, hclust_result, groups)
+hkmeans_accuracy <- calculate_accuracy(diabetes_scaled, hkmeans_result$cluster, groups)
+mclust_accuracy <- calculate_accuracy(diabetes_scaled, mclust_result$classification, groups)
 
 
 
@@ -136,45 +148,67 @@ mclust_accuracy <- calculate_accuracy(diabetes, mclust_result$classification, gr
 cat("k-means accuracy: ", kmeans_accuracy, "\n")
 cat("k-medoids accuracy: ", kmedoids_accuracy, "\n")
 cat("Hierarchical clustering accuracy: ", hclust_accuracy, "\n")
-#cat("Hierarchical k-means accuracy: ", hclust_kmeans_accuracy, "\n")
+cat("Hierarchical k-means accuracy: ", hkmeans_accuracy, "\n")
 cat("Model-based clustering accuracy: ", mclust_accuracy, "\n")
 ```
 
+Grafische Darstellung
 
 ```{r}
-# Perform hierarchical clustering
-hclust_result <- cutree(hclust(dist(diabetes_scaled)), k = 3)
-length(hclust_result)
+# Load the data
+diabetes <- read.csv("diabetes_RM.csv", header = TRUE, sep = ",")
+groups <- c("normal", "chemical", "overt")
 
-kmedoids_result$cluster
-hclust_result
-hclust_kmeans_result
+
+
+# Scale the selected columns
+diabetes_scaled_cols <- scale(diabetes[, c("rw", "fpg", "glucose", "insulin", "sspg")])
+
+# Create a new data frame from the scaled columns
+diabetes_scaled_df <- as.data.frame(diabetes_scaled_cols)
+
+# Set the row names of the scaled data frame to match the row names of the original data frame
+rownames(diabetes_scaled_df) <- rownames(diabetes)
+
+# Bind the scaled columns with the unscaled columns
+diabetes_scaled <- cbind(diabetes_scaled_df, group = diabetes$group)
+
+
+
+
+# Visualize the tree
+fviz_dend(hkmeans_result, cex = 0.6, palette = "jco", 
+          rect = TRUE, rect_border = "jco", rect_fill = TRUE)
+
+diabetes_scaled$group <- as.factor(diabetes_scaled$group)
+partimat(group ~ ., data = diabetes_scaled, method = "lda")
+
+ml <- lda(group ~ ., data = diabetes_scaled)
+
+print(ml) 
+
+# Perform PCA
+# Using subset
+diabetes_scaled <- subset(diabetes_scaled, select = -group)
+pca_result <- prcomp(diabetes_scaled, center = TRUE, scale. = TRUE)
+
+# Print summary of the PCA result
+summary(pca_result)
+
+# Plot the variance explained by each principal component
+plot(pca_result)
+
+
+# Perform PCA
+pca_result <- prcomp(diabetes_scaled[sapply(diabetes_scaled, is.numeric)])
+
+# Plot the correlation circle
+fviz_pca_var(pca_result, col.var="contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), repel = TRUE)
+
+# Plot the biplot
+fviz_pca_biplot(pca_result, col.var="#2E9FDF", col.ind="#696969")
 ```
 
-```{r}
-# Define a recursive function for hierarchical k-means clustering
-hierarchical_kmeans <- function(data, k) {
-  # Base case: if k is 1, return the data as a single cluster
-  if (k <= 1) {
-    return(rep(1, nrow(data)))
-  }
-  
-  # Apply k-means clustering to divide the data into k clusters
-  kmeans_result <- kmeans(data, centers = k)
-  
-  # Recursively apply the function to each cluster, adjusting the cluster numbers as necessary
-  cluster_assignments <- numeric(nrow(data))
-  for (i in 1:k) {
-    cluster_assignments[kmeans_result$cluster == i] <- hierarchical_kmeans(data[kmeans_result$cluster == i, ], k = floor(k / 2)) + (i - 1) * floor(k / 2)
-  }
-  
-  return(cluster_assignments)
-}
-
-# Apply the function to your data
-hclust_kmeans_result <- hierarchical_kmeans(diabetes_scaled, k = 3)
-hclust_kmeans_result
-```
 
 
 # 2 Clustering - Breast Cancer [4P]
