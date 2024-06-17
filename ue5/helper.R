@@ -73,24 +73,6 @@ recode_group_to_cluster <- function(group_data, cluster, groups) {
   group_means <- dplyr::select(group_means, -group)
   cluster_means <- dplyr::select(cluster_means, -cluster)
 
-  # # Loop over all rows of group_means
-  # for (i in 1:nrow(group_means)) {
-  #   # Get the i-th row of the dataframe
-  #   group_means_row <- group_means[i, ]
-
-  #   # Overwrite all rows with the i-th row
-  #   group_means_rows <- do.call("rbind", replicate(nrow(group_means), group_means_row, simplify = FALSE))
-
-  #   # Calculate the squared differences
-  #   differences <- (group_means_rows - cluster_means)^2
-
-  #   # Calculate the Euclidean distances
-  #   euclidian_distances <- sqrt(rowSums(differences))
-
-  #   # Find the cluster mean with the shortest distance to the given group mean
-  #   clusters <- recursive_function(euclidian_distances, clusters)
-  # }
-
   # Initialize an empty matrix to store the Euclidean distances
   euclidian_distances_matrix <- matrix(nrow = nrow(group_means), ncol = nrow(cluster_means))
 
@@ -114,11 +96,6 @@ recode_group_to_cluster <- function(group_data, cluster, groups) {
 
   print(euclidian_distances_matrix)
 
-  # Find the lowest sum of n elements in an nxn matrix where all of these elements share
-  # neither the same column index nor the same row index
-  # Did not work as expected. Not the best accuarcies are yielded
-  # clusters <- get_clusters_3(euclidian_distances_matrix) # --> playground
-
   clusters <- get_clusters_0(euclidian_distances_matrix)
 
   print(clusters)
@@ -133,6 +110,7 @@ recode_group_to_cluster <- function(group_data, cluster, groups) {
 }
 
 # Simple but sufficiently effective method
+# Other more complex methods did not yield better results --> playground
 get_clusters_0 <- function(euclidian_distances_matrix) {
   clusters <- c()
 
@@ -187,7 +165,7 @@ get_cluster_means <- function(group_data, cluster) {
   return(cluster_means)
 }
 
-create_scatter_plot <- function(group_data, cluster, cluster_name, accuracy_result, groups, ignore) {
+create_scatter_plot_with_accuracy <- function(group_data, cluster, cluster_name, accuracy_result, groups, ignore) {
   group_data$group <- recode_group_to_cluster(group_data, cluster, groups)
 
   # Add the cluster labels to the data frame
@@ -207,4 +185,42 @@ create_scatter_plot <- function(group_data, cluster, cluster_name, accuracy_resu
     labs(color = "Cluster", shape = "Correctly Labeled") +
     theme_minimal() +
     ggtitle(paste("Scatter plot of fpg vs glucose: ", cluster_name, " (Accuracy: ", 100 * round(accuracy_result, 2), "%)", sep = ""))
+}
+
+# create_scatter_plot <- function(group_data, cluster, groups) {
+#   group_data$group <- recode_group_to_cluster(group_data, cluster, groups)
+
+#   # Add the cluster labels to the data frame
+#   group_data$cluster <- cluster
+
+#   # Add a column to the data frame that indicates whether each data point was correctly labeled
+#   group_data$correctly_labeled <- ifelse(group_data$cluster == group_data$group, "Correct", "Incorrect")
+
+#   # Get the number of unique values
+#   k <- length(unique(cluster))
+
+
+#   ggplot(group_data, aes(x = fpg, y = glucose, color = as.factor(cluster), shape = correctly_labeled)) +
+#     geom_point() +
+#     scale_shape_manual(values = c("Correct" = 19, "Incorrect" = 4)) +
+#     labs(color = "Cluster", shape = "Correctly Labeled") +
+#     theme_minimal() +
+#     ggtitle(paste("Scatter plot of fpg vs glucose: k = ", k, sep = ""))
+# }
+
+
+create_scatter_plot <- function(group_data, cluster, groups) {
+  # Add the cluster labels to the data frame
+  group_data$cluster <- cluster
+
+  print(group_data)
+
+  # Get the number of unique values
+  k <- length(unique(cluster))
+
+  ggplot(group_data, aes(x = fpg, y = glucose, color = as.factor(cluster))) +
+    geom_point() +
+    labs(color = "Cluster") +
+    theme_minimal() +
+    ggtitle(paste("Scatter plot of fpg vs glucose: k = ", k, sep = ""))
 }

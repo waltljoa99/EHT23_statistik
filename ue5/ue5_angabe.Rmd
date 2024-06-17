@@ -60,6 +60,7 @@ load("fpc")
 load("mclust")
 load("dplyr")
 load("klaR")
+load("gridExtra")
 load("ggplot2")
 load("dbscan")
 
@@ -95,9 +96,6 @@ Verwenden Sie den Datensatz `diabetes_RM.csv`. Der Datensatz enthält fünf Mess
     + hierarchisches Clustering
     + hierarchischer k-means
     + Modell-basiertes Clustering
-* Stellen Sie die Ergebnisse grafisch dar (Scatter Plot).
-* Welches Verfahren ist am besten geeignet?
-* Finden Sie für k-means die optimale Anzahl an Cluster, und beurteilen Sie ob sich die Ground Truth Clusterstruktur reproduzieren lässt.
 
 ```{r}
 load_source()
@@ -192,8 +190,13 @@ cat("Hierarchical k-means accuracy: ", hkmeans_accuracy, "\n")
 cat("Model-based clustering accuracy: ", mclust_accuracy, "\n")
 ```
 
+* Welches Verfahren ist am besten geeignet?
 
-Grafische Darstellung
+Model-based Clustering erreicht mit etwa 86% die höchste Genauigkeit. 
+Auf dem zweiten Platz liegen gleich auf das k-means Clustering und das hierarchische k-means Clustering mit etwa 78% Genauigkeit.
+Es folgen mit etwa 75% Genauigkeit das k-medoids Clustering und das hierarchische Clustering.
+
+* Stellen Sie die Ergebnisse grafisch dar (Scatter Plot).
 
 ```{r}
 # Load the data
@@ -215,19 +218,27 @@ rownames(diabetes_scaled_df) <- rownames(diabetes)
 diabetes_scaled <- cbind(diabetes_scaled_df, group = diabetes$group)
 
 
-
+#------------------------------------------------------------------------------------------
+# Dendrogram
 
 # Visualize the tree
 fviz_dend(hkmeans_result, cex = 0.6, palette = "jco", 
           rect = TRUE, rect_border = "jco", rect_fill = TRUE)
 
+
+#------------------------------------------------------------------------------------------
+# Perform LDA
+
 diabetes_scaled$group <- as.factor(diabetes_scaled$group)
+
+# Partition plot
 partimat(group ~ ., data = diabetes_scaled, method = "lda")
 
 ml <- lda(group ~ ., data = diabetes_scaled)
 
 print(ml) 
 
+#------------------------------------------------------------------------------------------
 # Perform PCA
 # Using subset
 diabetes_scaled <- subset(diabetes_scaled, select = -group)
@@ -249,6 +260,10 @@ fviz_pca_var(pca_result, col.var="contrib", gradient.cols = c("#00AFBB", "#E7B80
 # Plot the biplot
 fviz_pca_biplot(pca_result, col.var="#2E9FDF", col.ind="#696969")
 ```
+
+Die LDA zeigt, dass fpg und glucose sowohl zu LD1 und LD2 am stärksten beitragen (d.h. die höchsten Absolutbeträge aufweisen).
+Die PCA bestätigt dies, da fpg und glucose die stärksten Beiträge zu PC1 und PC2 liefern.
+Deshalb werden die 2-D Scatter plots für fpg und glucose erstellt.
 
 ```{r}
 load_source()
@@ -277,16 +292,149 @@ for (name in names(cluster_list)) {
   if(name == "hclust") {
     ignore <- FALSE
   }
-  plot(create_scatter_plot(diabetes_scaled,
+  plot(create_scatter_plot_with_accuracy(diabetes_scaled,
       cluster_list[[name]], name, accuracy_results[[name]],
       groups,
       ignore))
 
   ignore <- TRUE
 }
-
-
 ```
+
+* Finden Sie für k-means die optimale Anzahl an Cluster, und beurteilen Sie ob sich die Ground Truth Clusterstruktur reproduzieren lässt.
+
+```{r}
+load_source()
+
+# Load the data
+diabetes <- read.csv("diabetes_RM.csv", header = TRUE, sep = ",")
+groups <- c("normal", "chemical", "overt")
+
+
+
+# Scale the selected columns
+diabetes_scaled_cols <- scale(diabetes[, c("rw", "fpg", "glucose", "insulin", "sspg")])
+
+# Create a new data frame from the scaled columns
+diabetes_scaled_df <- as.data.frame(diabetes_scaled_cols)
+
+# Set the row names of the scaled data frame to match the row names of the original data frame
+rownames(diabetes_scaled_df) <- rownames(diabetes)
+
+# Bind the scaled columns with the unscaled columns
+diabetes_scaled <- cbind(diabetes_scaled_df, group = diabetes$group)
+
+
+#------------------------------------------------------------------------------------------
+
+n = 6
+set.seed(123)
+sse <- numeric(n)
+cluster_list <- list()
+kmeans_result_list <- list()
+
+for(k in 1:n) {
+  kmeans_result <- kmeans(diabetes_scaled_cols, centers = k)
+  sse[k] <- kmeans_result$tot.withinss
+
+  cluster_list[[k]] <- kmeans_result$cluster
+  kmeans_result_list[[k]] <- kmeans_result
+}
+
+#------------------------------------------------------------------------------------------
+# Plot the SSE/WSS
+
+# Determine the optimal number of clusters using SSE
+plot(1:n, sse, type = "b", xlab = "Number of clusters (k)", ylab = "Sum of Squared Errors (SSE)")
+
+# Alternaitvely, determine the optimal number of clusters using the within-cluster sum of squares (WSS)
+# Both methods should give the same result
+fviz_nbclust(x = diabetes_scaled_cols, FUNcluster = kmeans, method = "wss", k.max = n)
+
+#------------------------------------------------------------------------------------------
+# Visualize the k-means clustering results
+
+# Depiction 1
+plot_list <- list()
+
+for(k in 1:n) {
+  # Generate the plot and store it in the list
+  plot_list[[k]] <- create_scatter_plot(diabetes_scaled, cluster_list[[k]], groups)
+}
+
+# Combine all the plots into a single plot
+grid.arrange(grobs = plot_list, ncol = 2)
+
+
+# Depiction 2
+plot_list <- list()
+
+for(k in 2:n) {
+  # Visualize kmeans clustering
+  plot_list[[k]] <- fviz_cluster(kmeans_result_list[[k]], diabetes_scaled_cols, ellipse.type = "norm")+
+    theme_minimal()
+}
+
+# Combine all the plots into a single plot
+grid.arrange(grobs = plot_list, ncol = 2)
+```
+
+```{r}
+set.seed(123)
+
+n = 6
+kmeans_result_list <- list()
+cluster_list <- list()
+silhouette_list <- list()
+silhouette_score <- numeric(n)
+
+for(k in 2:n) { # silhouette score is undefined for k = 1
+  kmeans_result <- kmeans(diabetes_scaled_cols, centers = k)
+  cluster_stats <- cluster.stats(dist(diabetes_scaled_cols), kmeans_result$cluster)
+  silhouette_values <- silhouette(kmeans_result$cluster, dist(diabetes_scaled_cols))
+  silhouette_score[k] <- mean(cluster_stats$avg.silwidth)
+  kmeans_result_list[[k]] <- kmeans_result
+  cluster_list[[k]] <- kmeans_result$cluster
+  silhouette_list[[k]] <- fviz_silhouette(silhouette_values)
+}
+
+# Find the number of clusters that gives the highest silhouette score
+best_k <- which.max(silhouette_score)
+
+# Print the best number of clusters
+print(paste("Best number of clusters (k):", best_k))
+
+#------------------------------------------------------------------------------------------
+# Plot the silhouette scores
+
+# Determine the optimal number of clusters using the silhouette score
+plot(2:n, silhouette_score[2:n], type = "b", xlab = "Number of clusters (k)", ylab = "Average Silhouette Width")
+
+
+# Alternatively, determine the optimal number of clusters using the silhouette method
+# Both methods should give the same result
+fviz_nbclust(x = diabetes_scaled_cols, FUNcluster = kmeans, method = "silhouette", k.max = n)
+
+#------------------------------------------------------------------------------------------
+# Silhouette plots
+
+# Initialize an empty list to store the plots
+plot_list <- list()
+
+for(k in 2:n) {
+  # Visualize kmeans clustering
+  # Print the silhouette plots for each number of clusters
+  plot_list[[k]] <- silhouette_list[[k]]
+}
+  
+
+# Combine all the plots into a single plot
+grid.arrange(grobs = plot_list, ncol = 2)
+```
+
+Bestimmung des optimalen k-Werts für k-Means-Clustering mit Hilfe des des Silhouettenkoeffizienten.
+Laut dem Silhouettenkoeffizienten ist der optimale k-Wert 2.
+
 
 
 # 2 Clustering - Breast Cancer [4P]
