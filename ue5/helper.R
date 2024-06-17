@@ -165,6 +165,7 @@ get_cluster_means <- function(group_data, cluster) {
   return(cluster_means)
 }
 
+
 create_scatter_plot_with_accuracy <- function(group_data, cluster, cluster_name, accuracy_result, groups, ignore) {
   group_data$group <- recode_group_to_cluster(group_data, cluster, groups)
 
@@ -187,27 +188,6 @@ create_scatter_plot_with_accuracy <- function(group_data, cluster, cluster_name,
     ggtitle(paste("Scatter plot of fpg vs glucose: ", cluster_name, " (Accuracy: ", 100 * round(accuracy_result, 2), "%)", sep = ""))
 }
 
-# create_scatter_plot <- function(group_data, cluster, groups) {
-#   group_data$group <- recode_group_to_cluster(group_data, cluster, groups)
-
-#   # Add the cluster labels to the data frame
-#   group_data$cluster <- cluster
-
-#   # Add a column to the data frame that indicates whether each data point was correctly labeled
-#   group_data$correctly_labeled <- ifelse(group_data$cluster == group_data$group, "Correct", "Incorrect")
-
-#   # Get the number of unique values
-#   k <- length(unique(cluster))
-
-
-#   ggplot(group_data, aes(x = fpg, y = glucose, color = as.factor(cluster), shape = correctly_labeled)) +
-#     geom_point() +
-#     scale_shape_manual(values = c("Correct" = 19, "Incorrect" = 4)) +
-#     labs(color = "Cluster", shape = "Correctly Labeled") +
-#     theme_minimal() +
-#     ggtitle(paste("Scatter plot of fpg vs glucose: k = ", k, sep = ""))
-# }
-
 
 create_scatter_plot <- function(group_data, cluster, groups) {
   # Add the cluster labels to the data frame
@@ -223,4 +203,49 @@ create_scatter_plot <- function(group_data, cluster, groups) {
     labs(color = "Cluster") +
     theme_minimal() +
     ggtitle(paste("Scatter plot of fpg vs glucose: k = ", k, sep = ""))
+}
+
+
+create_scatter_plot_pca <- function(pca_data, cluster, cluster_name) {
+  # Convert pca_data to a data frame
+  pca_data <- as.data.frame(pca_data)
+
+  # Add the cluster assignments to the data frame
+  pca_data$cluster <- as.factor(cluster)
+
+  # Get the number of unique values
+  k <- length(unique(cluster))
+
+  ggplot(pca_data, aes(x = PC1, y = PC2, color = cluster)) +
+    geom_point() +
+    labs(color = "Cluster") +
+    theme_minimal() +
+    ggtitle(paste("Scatter plot of PC1 vs PC2: k = ", k, " Cluster analysis: ", cluster_name, sep = ""))
+}
+
+
+calculate_clusters <- function(n, data, func, cluster_param_name) {
+  # Initialize the lists to store the clusters and results
+  cluster_list <- list()
+  result_list <- list()
+
+  # Loop over each number of clusters
+  for (k in 1:n) {
+    # Apply the function to the data
+    args <- list(data)
+    args[[cluster_param_name]] <- k
+    result <- do.call(func, args)
+
+    # Store the clusters and the result
+    cluster_list[[k]] <- result$cluster
+    result_list[[k]] <- result
+  }
+
+  # Initialize the list to store the results
+  results <- list()
+  results[["clusters"]] <- cluster_list
+  results[["results"]] <- result_list
+
+  # Return the results
+  return(results)
 }

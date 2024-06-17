@@ -54,6 +54,7 @@ if (!checkIDEisRStudio()) {
 # Load packages
 load("clue")
 load("cluster")
+load("tidyverse")
 load("factoextra")
 load("clusterCrit")
 load("fpc")
@@ -568,33 +569,33 @@ pca_result <- prcomp(breast_cancer_scaled, scale. = TRUE)
 summary(pca_result)
 
 # create a data frame with the first 10 principal components
-pca_data <- data.frame(pca_result$x[, 1:10])
+ <- data.frame(pca_result$x[, 1:10])
 
 # k-Means Clustering
 set.seed(123)
-kmeans_pca <- kmeans(pca_data, centers = 2, nstart = 20)
+kmeans_pca <- kmeans(, centers = 2, nstart = 20)
 groups.kmeans_pca <- kmeans_pca$cluster
 groups.kmeans_pca <- car::recode(groups.kmeans_pca, "1='B'; 2='M'", as.factor = TRUE)
 
 # k-Medoids Clustering
-kmedoids_pca <- pam(pca_data, k = 2)
+kmedoids_pca <- pam(, k = 2)
 groups.kmedoids_pca <- kmedoids_pca$clustering
 groups.kmedoids_pca <- car::recode(groups.kmedoids_pca, "1='M'; 2='B'", as.factor = TRUE)
 
 # Hierarchisches Clustering
-dist_pca <- dist(pca_data)
+dist_pca <- dist()
 hc_pca <- hclust(dist_pca, method = "ward.D2")
 groups.hc_pca <- cutree(hc_pca, k = 2)
 groups.hc_pca <- car::recode(groups.hc_pca, "1='M'; 2='B'", as.factor = TRUE)
 
 
 # Modell-basiertes Clustering
-mbc_pca <- Mclust(pca_data, G = 2)
+mbc_pca <- Mclust(, G = 2)
 groups.mbc_pca <- mbc_pca$classification
 groups.mbc_pca <- car::recode(groups.mbc_pca, "1='M'; 2='B'", as.factor = TRUE)
 
 # DBSCAN Clustering
-dbscan_pca <- dbscan(pca_data, eps = 5, MinPts = 50)
+dbscan_pca <- dbscan(, eps = 5, MinPts = 50)
 groups.dbscan_pca <- dbscan_pca$cluster
 groups.dbscan_pca <- car::recode(groups.dbscan_pca, "0='B'; 1='M'", as.factor = TRUE)
 
@@ -622,9 +623,186 @@ Die Auswirkung der PCA auf die Genauigkeit der Clusteranalyse zeigt große Unter
 Verwenden Sie den Datensatz `heart_disease_patients.csv`. Der Datensatz enthält anonymisierte Daten von Patienten, bei denen eine Herzerkrankung diagnostiziert wurde. Patienten mit ähnlichen Merkmalen könnten auf die gleichen Behandlungen ansprechen, und Ärzte könnten davon profitieren, etwas über die Behandlungsergebnisse von Patienten zu erfahren, die denen ähneln, die sie behandeln. Zu diesem Zweck führen Sie bitte eine Clusteranalyse durch. Vergleichen Sie unterschiedliche Algorithmen und versuchen Sie ein bestmögliches Ergebnis zu erreichen. Begründen Sie ihre Entscheidungen. Verwenden Sie nur numerische Merkmale und achten Sie auf uninformative Features und fehlende Daten. Versuchen Sie die resultierenden Cluster zu interpretieren.
 
 
+```{r}
+load_source()
+
+# Load the data
+heart_disease_patients_tot <- read.csv("heart_disease_patients.csv")
+
+heart_disease_patients <- subset(heart_disease_patients_tot, select= -c(id,sex,cp,fbs,restecg,exang,slope))
+print(heart_disease_patients)
+
+# Perform exploratory data analysis
+summary(heart_disease_patients)
+
+# Handle missing data
+heart_disease_patients <- na.omit(heart_disease_patients)
+
+# Normalize the numerical features (assuming all features are numerical)
+heart_disease_patients_scaled <- scale(heart_disease_patients, center = TRUE)
+
+#------------------------------------------------------------------------------------------
+# Perform PCA
+# Using subset
+pca_result <- prcomp(heart_disease_patients_scaled)
+
+# Print summary of the PCA result
+summary(pca_result)
+
+# Plot the variance explained by each principal component
+plot(pca_result)
+
+# Plot the correlation circle
+fviz_pca_var(pca_result, col.var="contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), repel = TRUE)
+
+# Plot the biplot
+fviz_pca_biplot(pca_result, col.var="#2E9FDF", col.ind="#696969")
+
+#------------------------------------------------------------------------------------------
+
+
+# Apply K-Means clustering
+set.seed(123)
+kmeans_result <- kmeans(heart_disease_patients_scaled, centers=3)
+
+# Evaluate the performance
+silhouette_score <- cluster.stats(dist(heart_disease_patients_scaled), kmeans_result$cluster)$silhouette.avg
+print(paste("Silhouette Score: ", silhouette_score))
+
+# Interpret the clusters
+print(kmeans_result$centers)
+
+create_scatter_plot_pca(heart_disease_patients, kmeans_result$cluster)
+
+```
+
+```{r}
+load_source()
+
+# Perform PCA on the scaled data
+pca_result <- prcomp(heart_disease_patients_scaled)
+
+# Get the data in the PC space
+pc_data <- pca_result$x
+
+# Perform k-means clustering
+kmeans_result <- kmeans(pc_data, centers = 3)
+
+# Perform k-medoids clustering
+kmedoids_result <- pam(pc_data, k = 3)
+
+# Perform hierarchical clustering
+hclust_result <- cutree(hclust(dist(pc_data)), k = 3)
+
+# Perform hierarchical k-means clustering
+hkmeans_result <- hkmeans(pc_data, 3)
+
+# Perform model-based clustering
+mclust_result <- Mclust(pc_data, G = 3)
+
+kmeans_cluster <- kmeans_result$cluster
+kmedoids_cluster <- kmedoids_result$cluster
+hclust_cluster <- hclust_result
+hkmeans_cluster <- hkmeans_result$cluster
+mclust_cluster <- mclust_result$classification
+
+# Create a list of the cluster results
+cluster_list <- list(kmeans = kmeans_cluster, 
+                     kmedoids = kmedoids_cluster, 
+                     hclust = hclust_cluster, 
+                     hkmeans = hkmeans_cluster, 
+                     mclust = mclust_cluster)
+
+
+# Iterate over the cluster_list
+for(cluster_name in names(cluster_list)) {
+  # Get the cluster
+  cluster <- cluster_list[[cluster_name]]
+  
+  # Call the create_scatter_plot_pca function
+  print(create_scatter_plot_pca(pc_data, cluster, cluster_name))
+}
+```
+
+
+```{r}
+load_source()
+
+data <- pc_data
+
+
+n = 6
+set.seed(123)
+sse <- numeric(n)
+cluster_list <- list()
+kmeans_result_list <- list()
+
+for(k in 1:n) {
+  kmeans_result <- kmeans(data, centers = k)
+  sse[k] <- kmeans_result$tot.withinss
+
+  cluster_list[[k]] <- kmeans_result$cluster
+  kmeans_result_list[[k]] <- kmeans_result
+}
+
+#------------------------------------------------------------------------------------------
+
+# Determine the optimal number of clusters using the within-cluster sum of squares (WSS)
+fviz_nbclust(x = data, FUNcluster = kmeans, method = "wss", k.max = n)
+
+# Determine the optimal number of clusters using the silhouette method
+fviz_nbclust(x = data, FUNcluster = kmeans, method = "silhouette", k.max = n)
+
+
+#------------------------------------------------------------------------------------------
+# Visualize the k-means clustering results
+
+# Depiction 1
+plot_list <- list()
+
+for(k in 1:n) {
+  # Generate the plot and store it in the list
+  plot_list[[k]] <- create_scatter_plot_pca( data, cluster_list[[k]], names(cluster_list)[k] )
+}
+
+# Combine all the plots into a single plot
+grid.arrange(grobs = plot_list, ncol = 2)
+
+
+# Depiction 2
+plot_list <- list()
+
+for(k in 2:n) {
+  # Visualize kmeans clustering
+  plot_list[[k]] <- fviz_cluster(kmeans_result_list[[k]], data = data[, c(1,2)], ellipse.type = "norm")+
+    theme_minimal()
+}
+
+# Combine all the plots into a single plot
+grid.arrange(grobs = plot_list, ncol = 2)
+```
 
 
 
+```{r}
+load_source()
+# Define the list of methods
+methods <- list("kmeans" = kmeans, "pam" = pam)  # pam is the function for k-medoids clustering in the cluster package
 
+# Calculate the clusters
+clusters <- calculate_clusters(n = 6, data = data, methods = methods)
+```
 
+```{r}
+# Perform PCA on the scaled data
+pca_result <- prcomp(data)
 
+# Get the data in the PC space
+pc_data <- pca_result$x
+
+# Perform k-means clustering in the PC space
+kmeans_result <- kmeans(pc_data, centers = 3)
+
+# Get the cluster labels
+cluster_labels <- kmeans_result$cluster
+```
