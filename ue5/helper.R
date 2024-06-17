@@ -193,7 +193,7 @@ create_scatter_plot <- function(group_data, cluster, groups) {
   # Add the cluster labels to the data frame
   group_data$cluster <- cluster
 
-  print(group_data)
+  # print(group_data)
 
   # Get the number of unique values
   k <- length(unique(cluster))

@@ -569,33 +569,33 @@ pca_result <- prcomp(breast_cancer_scaled, scale. = TRUE)
 summary(pca_result)
 
 # create a data frame with the first 10 principal components
- <- data.frame(pca_result$x[, 1:10])
+pca_data <- data.frame(pca_result$x[, 1:10])
 
 # k-Means Clustering
 set.seed(123)
-kmeans_pca <- kmeans(, centers = 2, nstart = 20)
+kmeans_pca <- kmeans(pca_data, centers = 2, nstart = 20)
 groups.kmeans_pca <- kmeans_pca$cluster
 groups.kmeans_pca <- car::recode(groups.kmeans_pca, "1='B'; 2='M'", as.factor = TRUE)
 
 # k-Medoids Clustering
-kmedoids_pca <- pam(, k = 2)
+kmedoids_pca <- pam(pca_data, k = 2)
 groups.kmedoids_pca <- kmedoids_pca$clustering
 groups.kmedoids_pca <- car::recode(groups.kmedoids_pca, "1='M'; 2='B'", as.factor = TRUE)
 
 # Hierarchisches Clustering
-dist_pca <- dist()
+dist_pca <- dist(pca_data)
 hc_pca <- hclust(dist_pca, method = "ward.D2")
 groups.hc_pca <- cutree(hc_pca, k = 2)
 groups.hc_pca <- car::recode(groups.hc_pca, "1='M'; 2='B'", as.factor = TRUE)
 
 
 # Modell-basiertes Clustering
-mbc_pca <- Mclust(, G = 2)
+mbc_pca <- Mclust(pca_data, G = 2)
 groups.mbc_pca <- mbc_pca$classification
 groups.mbc_pca <- car::recode(groups.mbc_pca, "1='M'; 2='B'", as.factor = TRUE)
 
 # DBSCAN Clustering
-dbscan_pca <- dbscan(, eps = 5, MinPts = 50)
+dbscan_pca <- dbscan(pca_data, eps = 5, MinPts = 50)
 groups.dbscan_pca <- dbscan_pca$cluster
 groups.dbscan_pca <- car::recode(groups.dbscan_pca, "0='B'; 1='M'", as.factor = TRUE)
 
@@ -616,6 +616,7 @@ accuracy_df_pca
 fviz_cluster(object=kmeans_pca, data=breast_cancer_scaled,ellipse.type = "norm",repel = F) + ggtitle("k-Means Clustering with PCA")
 
 ```
+
 Die Auswirkung der PCA auf die Genauigkeit der Clusteranalyse zeigt große Unterschiede bei den einzelnen Methoden. Während sich die Genauigkeit des k-Means-Verfahrens nicht verbessert hat, zeigt die k-Medoids eine Verbesserung von 89.1% auf 91.38%. Die hierarchische Clusteranalyse zeigt die stärkste Verbesserung, mit einem Sprung von 88% auf 91.92%. Im Gegensatz dazu zeigt das modellbasierte Clustering eine deutliche Verschlechterung der Genauigkeit von 89.1% auf 63.62%. Offenbar ist das modellbasierte Clustering weniger gut geeignet, um die Daten in zwei Hauptcluster zu unterteilen, nachdem die Dimensionalität reduziert wurde. 
 
 
@@ -662,17 +663,20 @@ fviz_pca_biplot(pca_result, col.var="#2E9FDF", col.ind="#696969")
 
 
 # Apply K-Means clustering
+
+data <- pca_result$x
+
 set.seed(123)
-kmeans_result <- kmeans(heart_disease_patients_scaled, centers=3)
+kmeans_result <- kmeans(data, centers=3)
 
 # Evaluate the performance
-silhouette_score <- cluster.stats(dist(heart_disease_patients_scaled), kmeans_result$cluster)$silhouette.avg
+silhouette_score <- cluster.stats(dist(data), kmeans_result$cluster)$avg.silwidth
 print(paste("Silhouette Score: ", silhouette_score))
 
 # Interpret the clusters
 print(kmeans_result$centers)
 
-create_scatter_plot_pca(heart_disease_patients, kmeans_result$cluster)
+plot(create_scatter_plot_pca(data, kmeans_result$cluster, "kmeans"))
 
 ```
 
