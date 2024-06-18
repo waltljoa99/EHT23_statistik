@@ -623,18 +623,21 @@ Die Auswirkung der PCA auf die Genauigkeit der Clusteranalyse zeigt große Unter
 # 3 Clustering - Heart Disease Patients [3P]
 Verwenden Sie den Datensatz `heart_disease_patients.csv`. Der Datensatz enthält anonymisierte Daten von Patienten, bei denen eine Herzerkrankung diagnostiziert wurde. Patienten mit ähnlichen Merkmalen könnten auf die gleichen Behandlungen ansprechen, und Ärzte könnten davon profitieren, etwas über die Behandlungsergebnisse von Patienten zu erfahren, die denen ähneln, die sie behandeln. Zu diesem Zweck führen Sie bitte eine Clusteranalyse durch. Vergleichen Sie unterschiedliche Algorithmen und versuchen Sie ein bestmögliches Ergebnis zu erreichen. Begründen Sie ihre Entscheidungen. Verwenden Sie nur numerische Merkmale und achten Sie auf uninformative Features und fehlende Daten. Versuchen Sie die resultierenden Cluster zu interpretieren.
 
+PCA and Summary Stats
 
 ```{r}
 load_source()
+# Data Preparation
 
 # Load the data
 heart_disease_patients_tot <- read.csv("heart_disease_patients.csv")
 
+# Remove uninformativ non-numeric features
 heart_disease_patients <- subset(heart_disease_patients_tot, select= -c(id,sex,cp,fbs,restecg,exang,slope))
-print(heart_disease_patients)
+# print(heart_disease_patients)
 
 # Perform exploratory data analysis
-summary(heart_disease_patients)
+# summary(heart_disease_patients)
 
 # Handle missing data
 heart_disease_patients <- na.omit(heart_disease_patients)
@@ -650,6 +653,15 @@ pca_result <- prcomp(heart_disease_patients_scaled)
 # Print summary of the PCA result
 summary(pca_result)
 
+# Get the data in the PC space
+data <- pca_result$x
+
+# Max number of clusters
+n = 6
+
+#------------------------------------------------------------------------------------------
+# PCA Plots
+
 # Plot the variance explained by each principal component
 plot(pca_result)
 
@@ -660,96 +672,7 @@ fviz_pca_var(pca_result, col.var="contrib", gradient.cols = c("#00AFBB", "#E7B80
 fviz_pca_biplot(pca_result, col.var="#2E9FDF", col.ind="#696969")
 
 #------------------------------------------------------------------------------------------
-
-
-# Apply K-Means clustering
-
-data <- pca_result$x
-
-set.seed(123)
-kmeans_result <- kmeans(data, centers=3)
-
-# Evaluate the performance
-silhouette_score <- cluster.stats(dist(data), kmeans_result$cluster)$avg.silwidth
-print(paste("Silhouette Score: ", silhouette_score))
-
-# Interpret the clusters
-print(kmeans_result$centers)
-
-plot(create_scatter_plot_pca(data, kmeans_result$cluster, "kmeans"))
-
-```
-
-```{r}
-load_source()
-
-# Perform PCA on the scaled data
-pca_result <- prcomp(heart_disease_patients_scaled)
-
-# Get the data in the PC space
-pc_data <- pca_result$x
-
-# Perform k-means clustering
-kmeans_result <- kmeans(pc_data, centers = 3)
-
-# Perform k-medoids clustering
-kmedoids_result <- pam(pc_data, k = 3)
-
-# Perform hierarchical clustering
-hclust_result <- cutree(hclust(dist(pc_data)), k = 3)
-
-# Perform hierarchical k-means clustering
-hkmeans_result <- hkmeans(pc_data, 3)
-
-# Perform model-based clustering
-mclust_result <- Mclust(pc_data, G = 3)
-
-kmeans_cluster <- kmeans_result$cluster
-kmedoids_cluster <- kmedoids_result$cluster
-hclust_cluster <- hclust_result
-hkmeans_cluster <- hkmeans_result$cluster
-mclust_cluster <- mclust_result$classification
-
-# Create a list of the cluster results
-cluster_list <- list(kmeans = kmeans_cluster, 
-                     kmedoids = kmedoids_cluster, 
-                     hclust = hclust_cluster, 
-                     hkmeans = hkmeans_cluster, 
-                     mclust = mclust_cluster)
-
-
-# Iterate over the cluster_list
-for(cluster_name in names(cluster_list)) {
-  # Get the cluster
-  cluster <- cluster_list[[cluster_name]]
-  
-  # Call the create_scatter_plot_pca function
-  print(create_scatter_plot_pca(pc_data, cluster, cluster_name))
-}
-```
-
-
-```{r}
-load_source()
-
-data <- pc_data
-
-
-n = 6
-set.seed(123)
-sse <- numeric(n)
-cluster_list <- list()
-kmeans_result_list <- list()
-
-for(k in 1:n) {
-  kmeans_result <- kmeans(data, centers = k)
-  sse[k] <- kmeans_result$tot.withinss
-
-  cluster_list[[k]] <- kmeans_result$cluster
-  kmeans_result_list[[k]] <- kmeans_result
-}
-
-#------------------------------------------------------------------------------------------
+# Plots for Number of Clusters
 
 # Determine the optimal number of clusters using the within-cluster sum of squares (WSS)
 fviz_nbclust(x = data, FUNcluster = kmeans, method = "wss", k.max = n)
@@ -757,56 +680,142 @@ fviz_nbclust(x = data, FUNcluster = kmeans, method = "wss", k.max = n)
 # Determine the optimal number of clusters using the silhouette method
 fviz_nbclust(x = data, FUNcluster = kmeans, method = "silhouette", k.max = n)
 
-
 #------------------------------------------------------------------------------------------
-# Visualize the k-means clustering results
+# Silhouette Scores
 
-# Depiction 1
-plot_list <- list()
+n = 6 # max number of clusters
 
-for(k in 1:n) {
-  # Generate the plot and store it in the list
-  plot_list[[k]] <- create_scatter_plot_pca( data, cluster_list[[k]], names(cluster_list)[k] )
+# Cluster vectors are generated by different clustering methods for a given k
+# They are stored in a list which is generated for each k
+# These lists are stored inside another list
+lists_of_cluster_vectors <- list()
+
+# Create a list of lists of cluster vectors for different k
+for (k in 1:n) {
+  lists_of_cluster_vectors[[k]] <- get_list_of_cluster_vectors(data, k) # for m clustering methods and a given k
+  # Name each list of cluster vectors 'k'
+  names(lists_of_cluster_vectors)[k] <- as.character(k)
 }
 
-# Combine all the plots into a single plot
-grid.arrange(grobs = plot_list, ncol = 2)
+m = length(lists_of_cluster_vectors[[1]])
+# Loop over k lists of cluster vectors
+# and pick the i-th cluster vector from that list
+for( i in 1:m) {
 
-
-# Depiction 2
-plot_list <- list()
-
-for(k in 2:n) {
-  # Visualize kmeans clustering
-  plot_list[[k]] <- fviz_cluster(kmeans_result_list[[k]], data = data[, c(1,2)], ellipse.type = "norm")+
-    theme_minimal()
+  print(paste("Method Used: ", names(lists_of_cluster_vectors[[1]])[i]))
+  for(k in 2:n) {
+    score <- round(cluster.stats( dist(data), lists_of_cluster_vectors[[k]][[i]])$avg.silwidth,2)
+    print(paste("For k = ",names(lists_of_cluster_vectors)[k]," Silhouette Score: ", score))
+  }
+    
 }
 
-# Combine all the plots into a single plot
-grid.arrange(grobs = plot_list, ncol = 2)
 ```
 
-
+Grouped Scatter/Cluster Plots for 1 to n Clusters for Each (Suitable) Clustering Method
 
 ```{r}
 load_source()
-# Define the list of methods
-methods <- list("kmeans" = kmeans, "pam" = pam)  # pam is the function for k-medoids clustering in the cluster package
+# Data Preparation
 
-# Calculate the clusters
-clusters <- calculate_clusters(n = 6, data = data, methods = methods)
-```
+# Load the data
+heart_disease_patients_tot <- read.csv("heart_disease_patients.csv")
 
-```{r}
+# Remove uninformativ non-numeric features
+heart_disease_patients <- subset(heart_disease_patients_tot, select= -c(id,sex,cp,fbs,restecg,exang,slope))
+
+# Handle missing data
+heart_disease_patients <- na.omit(heart_disease_patients)
+
+# Normalize the numerical features (assuming all features are numerical)
+heart_disease_patients_scaled <- scale(heart_disease_patients, center = TRUE)
+
+#------------------------------------------------------------------------------------------
+# Perform PCA
+
 # Perform PCA on the scaled data
-pca_result <- prcomp(data)
+pca_result <- prcomp(heart_disease_patients_scaled)
 
 # Get the data in the PC space
-pc_data <- pca_result$x
+data <- pca_result$x
 
-# Perform k-means clustering in the PC space
-kmeans_result <- kmeans(pc_data, centers = 3)
+#------------------------------------------------------------------------------------------
+# Perform different clustering methods
+n = 6 # max number of clusters
 
-# Get the cluster labels
-cluster_labels <- kmeans_result$cluster
+# Cluster vectors are generated by different clustering methods for a given k
+# They are stored in a list which is generated for each k
+# These lists are stored inside another list
+lists_of_cluster_vectors <- list()
+
+# Create a list of lists of cluster vectors for different k
+for (k in 1:n) {
+  lists_of_cluster_vectors[[k]] <- get_list_of_cluster_vectors(data, k) # for m methods of clustering and a given k
+  # Name each list of cluster vectors 'k'
+  names(lists_of_cluster_vectors)[k] <- as.character(k)
+}
+
+# Cluster results are generated by different clustering methods for a given k
+# They are stored in a list which is generated for each k
+# These lists are stored inside another list
+lists_of_cluster_results <- list()
+
+# Create a list of lists of cluster results for different k
+for (k in 1:n) {
+  lists_of_cluster_results[[k]] <- get_list_of_cluster_results(data, k) # for m methods of clustering and a given k
+  # Name each list of cluster results 'k'
+  names(lists_of_cluster_results)[k] <- as.character(k)
+}
+
+#------------------------------------------------------------------------------------------
+# Visualize the cluster vectors and results
+
+#--- Methods ---#
+
+create_grid_plot_vectors <- function(data, lists_of_cluster_vectors, i, n) {
+  # Depiction 1
+  plot_list <- list()
+
+
+  for(k in 1:n) {
+    # Generate the plot and store it in the list
+    plot_list[[k]] <- create_scatter_plot_pca( data, lists_of_cluster_vectors[[k]][[i]], names(lists_of_cluster_vectors[[k]])[i] )
+  }
+
+  # Combine all the plots into a single plot
+  grid.arrange(grobs = plot_list, ncol = 2)
+}
+
+
+create_grid_plot_results <- function(data, lists_of_cluster_results, i, n) {
+  # Depiction 2
+  plot_list <- list()
+
+  for(k in 2:n) { 
+    # Visualize kmeans clustering
+    plot_list[[k]] <- fviz_cluster(lists_of_cluster_results[[k]][[i]], data = data[, c(1,2)], ellipse.type = "norm")+
+      theme_minimal() +
+      ggtitle(paste("Cluster plot of:", names(lists_of_cluster_results[[k]])[i],"for k = ", names(lists_of_cluster_results)[k])) +
+      xlab("PC1") +
+      ylab("PC2")
+  }
+
+  # Combine all the plots into a single plot
+  grid.arrange(grobs = plot_list, ncol = 2)
+}
+
+#--- End of Methods --#
+
+# All cluster vectors of different clustering methods have the same length independenly of k
+m = length(lists_of_cluster_vectors[[1]])
+# Loop over k lists of cluster vectors
+# and pick the i-th cluster vector from that list
+for( i in 1:m) {
+  create_grid_plot_vectors(data,lists_of_cluster_vectors,i,n)
+}
+
+for( i in 1:(m-1)) {
+  create_grid_plot_results(data,lists_of_cluster_results,i,n)
+}
+
 ```

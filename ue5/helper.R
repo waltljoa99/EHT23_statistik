@@ -202,7 +202,7 @@ create_scatter_plot <- function(group_data, cluster, groups) {
     geom_point() +
     labs(color = "Cluster") +
     theme_minimal() +
-    ggtitle(paste("Scatter plot of fpg vs glucose: k = ", k, sep = ""))
+    ggtitle(paste("Scatter plot of: ", cluster_name, " for k = ", k, sep = ""))
 }
 
 
@@ -220,32 +220,81 @@ create_scatter_plot_pca <- function(pca_data, cluster, cluster_name) {
     geom_point() +
     labs(color = "Cluster") +
     theme_minimal() +
-    ggtitle(paste("Scatter plot of PC1 vs PC2: k = ", k, " Cluster analysis: ", cluster_name, sep = ""))
+    ggtitle(paste("Scatter plot of: ", cluster_name, " for k = ", k, sep = ""))
 }
 
 
-calculate_clusters <- function(n, data, func, cluster_param_name) {
-  # Initialize the lists to store the clusters and results
-  cluster_list <- list()
-  result_list <- list()
+get_list_of_cluster_vectors <- function(df, k) {
+  # Perform PCA on the scaled data
+  pca_result <- prcomp(df)
 
-  # Loop over each number of clusters
-  for (k in 1:n) {
-    # Apply the function to the data
-    args <- list(data)
-    args[[cluster_param_name]] <- k
-    result <- do.call(func, args)
+  # Get the data in the PC space
+  pc_data <- pca_result$x
 
-    # Store the clusters and the result
-    cluster_list[[k]] <- result$cluster
-    result_list[[k]] <- result
-  }
 
-  # Initialize the list to store the results
-  results <- list()
-  results[["clusters"]] <- cluster_list
-  results[["results"]] <- result_list
+  # Perform k-means clustering
+  kmeans_result <- kmeans(pc_data, centers = k)
 
-  # Return the results
-  return(results)
+  # Perform k-medoids clustering
+  kmedoids_result <- pam(pc_data, k = k)
+
+  # Perform hierarchical k-means clustering
+  hkmeans_result <- hkmeans(pc_data, k)
+
+  # Perform model-based clustering
+  mclust_result <- Mclust(pc_data, G = k)
+
+  # Perform hierarchical clustering
+  hclust_result <- cutree(hclust(dist(pc_data)), k = k)
+
+  kmeans_cluster <- kmeans_result$cluster
+  kmedoids_cluster <- kmedoids_result$cluster
+  hkmeans_cluster <- hkmeans_result$cluster
+  mclust_cluster <- mclust_result$classification
+  hclust_cluster <- hclust_result
+
+  # Create a list of the cluster results
+  list_of_cluster_vectors <- list(
+    kmeans = kmeans_cluster,
+    kmedoids = kmedoids_cluster,
+    hkmeans = hkmeans_cluster,
+    mclust = mclust_cluster,
+    hclust = hclust_cluster
+  )
+
+  return(list_of_cluster_vectors)
+}
+
+get_list_of_cluster_results <- function(df, k) {
+  # Perform PCA on the scaled data
+  pca_result <- prcomp(df)
+
+  # Get the data in the PC space
+  pc_data <- pca_result$x
+
+  # Perform k-means clustering
+  kmeans_result <- kmeans(pc_data, centers = k)
+
+  # Perform k-medoids clustering
+  kmedoids_result <- pam(pc_data, k = k)
+
+  # Perform hierarchical k-means clustering
+  hkmeans_result <- hkmeans(pc_data, k)
+
+  # Perform model-based clustering
+  mclust_result <- Mclust(pc_data, G = k)
+
+  # Perform hierarchical clustering
+  hclust_result <- cutree(hclust(dist(pc_data)), k = k)
+
+  # Create a list of the cluster results
+  list_of_cluster_results <- list(
+    kmeans = kmeans_result,
+    kmedoids = kmedoids_result,
+    hkmeans = hkmeans_result,
+    mclust = mclust_result,
+    hclust = hclust_result
+  )
+
+  return(list_of_cluster_results)
 }
