@@ -189,7 +189,7 @@ create_scatter_plot_with_accuracy <- function(group_data, cluster, cluster_name,
 }
 
 
-create_scatter_plot <- function(group_data, cluster, groups) {
+create_scatter_plot <- function(group_data, cluster) {
   # Add the cluster labels to the data frame
   group_data$cluster <- cluster
 
@@ -202,7 +202,7 @@ create_scatter_plot <- function(group_data, cluster, groups) {
     geom_point() +
     labs(color = "Cluster") +
     theme_minimal() +
-    ggtitle(paste("Scatter plot of: ", cluster_name, " for k = ", k, sep = ""))
+    ggtitle(paste("Scatter plot of: kmeans for k = ", k, sep = ""))
 }
 
 

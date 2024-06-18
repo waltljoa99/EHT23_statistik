@@ -154,8 +154,8 @@ ground_truth <- recode(diabetes$group, !!!recode_vector)
 
 #ground_truth <- diabetes$group
 
-# Create a list of the cluster results
-cluster_list <- list(ground_truth = ground_truth,
+# Create a list of the cluster vectors
+list_of_cluster_vectors <- list(ground_truth = ground_truth,
                      kmeans = kmeans_cluster, 
                      kmedoids = kmedoids_cluster, 
                      hclust = hclust_cluster, 
@@ -264,7 +264,7 @@ fviz_pca_biplot(pca_result, col.var="#2E9FDF", col.ind="#696969")
 
 Die LDA zeigt, dass fpg und glucose sowohl zu LD1 und LD2 am stärksten beitragen (d.h. die höchsten Absolutbeträge aufweisen).
 Die PCA bestätigt dies, da fpg und glucose die stärksten Beiträge zu PC1 und PC2 liefern.
-Deshalb werden die 2-D Scatter plots für fpg und glucose erstellt.
+Deshalb werden die 2-D Scatter plots *direkt* für fpg und glucose erstellt.
 
 ```{r}
 load_source()
@@ -276,7 +276,7 @@ groups <- c("normal", "chemical", "overt")
 
 
 # Scale the selected columns
-diabetes_scaled_cols <- scale(diabetes[, c("rw", "fpg", "glucose", "insulin", "sspg")])
+diabetes_scaled_cols <- scale(diabetes[, c("rw", "fpg", "glucose", "insulin", "sspg")], center = TRUE)
 
 # Create a new data frame from the scaled columns
 diabetes_scaled_df <- as.data.frame(diabetes_scaled_cols)
@@ -289,12 +289,12 @@ diabetes_scaled <- cbind(diabetes_scaled_df, group = diabetes$group)
 
 ignore <- TRUE
 # Loop over the list and create a scatter plot for each set of cluster labels
-for (name in names(cluster_list)) {
+for (name in names(list_of_cluster_vectors)) {
   if(name == "hclust") {
     ignore <- FALSE
   }
   plot(create_scatter_plot_with_accuracy(diabetes_scaled,
-      cluster_list[[name]], name, accuracy_results[[name]],
+      list_of_cluster_vectors[[name]], name, accuracy_results[[name]],
       groups,
       ignore))
 
@@ -331,15 +331,15 @@ diabetes_scaled <- cbind(diabetes_scaled_df, group = diabetes$group)
 n = 6
 set.seed(123)
 sse <- numeric(n)
-cluster_list <- list()
-kmeans_result_list <- list()
+list_of_cluster_vectors <- list()
+list_of_cluster_results <- list()
 
 for(k in 1:n) {
   kmeans_result <- kmeans(diabetes_scaled_cols, centers = k)
   sse[k] <- kmeans_result$tot.withinss
 
-  cluster_list[[k]] <- kmeans_result$cluster
-  kmeans_result_list[[k]] <- kmeans_result
+  list_of_cluster_vectors[[k]] <- kmeans_result$cluster
+  list_of_cluster_results[[k]] <- kmeans_result
 }
 
 #------------------------------------------------------------------------------------------
@@ -360,7 +360,7 @@ plot_list <- list()
 
 for(k in 1:n) {
   # Generate the plot and store it in the list
-  plot_list[[k]] <- create_scatter_plot(diabetes_scaled, cluster_list[[k]], groups)
+  plot_list[[k]] <- create_scatter_plot(diabetes_scaled, list_of_cluster_vectors[[k]])
 }
 
 # Combine all the plots into a single plot
@@ -372,7 +372,7 @@ plot_list <- list()
 
 for(k in 2:n) {
   # Visualize kmeans clustering
-  plot_list[[k]] <- fviz_cluster(kmeans_result_list[[k]], diabetes_scaled_cols, ellipse.type = "norm")+
+  plot_list[[k]] <- fviz_cluster(list_of_cluster_results[[k]], diabetes_scaled_cols, ellipse.type = "norm")+
     theme_minimal()
 }
 
@@ -380,12 +380,15 @@ for(k in 2:n) {
 grid.arrange(grobs = plot_list, ncol = 2)
 ```
 
+Für k = 3 lässt sich die Ground Truth Clusterstruktur reproduzieren. Die Cluster sind klar voneinander getrennt
+und entsprechen visuell den Ground Truth Klassen "normal", "chemical" und "overt".
+
 ```{r}
 set.seed(123)
 
 n = 6
-kmeans_result_list <- list()
-cluster_list <- list()
+list_of_cluster_results <- list()
+list_of_cluster_vectors <- list()
 silhouette_list <- list()
 silhouette_score <- numeric(n)
 
@@ -394,8 +397,8 @@ for(k in 2:n) { # silhouette score is undefined for k = 1
   cluster_stats <- cluster.stats(dist(diabetes_scaled_cols), kmeans_result$cluster)
   silhouette_values <- silhouette(kmeans_result$cluster, dist(diabetes_scaled_cols))
   silhouette_score[k] <- mean(cluster_stats$avg.silwidth)
-  kmeans_result_list[[k]] <- kmeans_result
-  cluster_list[[k]] <- kmeans_result$cluster
+  list_of_cluster_results[[k]] <- kmeans_result
+  list_of_cluster_vectors[[k]] <- kmeans_result$cluster
   silhouette_list[[k]] <- fviz_silhouette(silhouette_values)
 }
 
@@ -426,17 +429,18 @@ for(k in 2:n) {
   # Visualize kmeans clustering
   # Print the silhouette plots for each number of clusters
   plot_list[[k]] <- silhouette_list[[k]]
+  score <- round(cluster.stats( dist(diabetes_scaled_cols), list_of_cluster_vectors[[k]])$avg.silwidth,2)
+  print(paste("For k = ",k," Silhouette Score: ", score))
 }
-  
 
 # Combine all the plots into a single plot
 grid.arrange(grobs = plot_list, ncol = 2)
 ```
 
 Bestimmung des optimalen k-Werts für k-Means-Clustering mit Hilfe des des Silhouettenkoeffizienten.
-Laut dem Silhouettenkoeffizienten ist der optimale k-Wert 2.
-
-
+Laut dem Silhouettenkoeffizienten ist der optimale k-Wert 2 (0.51).
+Die Elbow-Methode spricht ebenso, dass der optimale k-Wert eher 2 ist.
+Hätten wir keine Labelinformation zur Verfügung, würde wir den k-Wert 2 wählen.
 
 # 2 Clustering - Breast Cancer [4P]
 Brustkrebs ist weltweit die häufigste bösartige Erkrankung bei Frauen und eine der Hauptursachen für krebsbedingte Todesfälle sowohl in Entwicklungs- als auch in Industrieländern. Verwenden Sie den Datensatz `breast_cancer.csv`. Die Merkmale werden aus einem digitalisierten Bild eines Feinnadelaspirats einer Brustmasse berechnet. Sie beschreiben Merkmale der im Bild vorhandenen Zellkerne. Das Zielmerkmal erfasst die Prognose gutartig (B) oder bösartig (M) und dient hier als Ground Truth. Achten Sie auf uninformative Features (z.B. ID) und fehlende Daten (Missing Values).
