@@ -1,7 +1,7 @@
 ---
 title: "Vertiefende statistische Verfahren"
 subtitle: "5. Übungsblatt SS 2024"
-author:
+author: "Stefan Kolb, Joachim Waltl"
 output:
   pdf_document: default
   html_document:
@@ -84,7 +84,6 @@ load_source()
 ```
 
 
-
 # Allgemeine Information
 Alle Aufgaben sind mit R zu lössen, wenn nicht explizit anders angegeben. Die Berechnungen sollen nachvollziehbar und dokumentiert sein. Um die vollständige Punktezahl zu erreichen, müssen alle Ergebnisse und Fragen entsprechend interpretiert bzw. beantwortet werden. Code alleine ist nicht ausreichend! Die Abgabe erfolgt über Moodle entsprechend der Abgaberichtlinien als pdf und Rmd File. Bitte inkludieren Sie namentlich alle beteiligten Gruppenmitglieder sowohl im Bericht als auch im Source Code.
 Die jeweiligen Datensätze die für diese Übung relevant sind finden Sie ebenfalls in Moodle.
@@ -104,8 +103,6 @@ load_source()
 # Load the data
 diabetes <- read.csv("diabetes_RM.csv", header = TRUE, sep = ",")
 groups <- c("normal", "chemical", "overt")
-
-
 
 # Scale the selected columns
 diabetes_scaled_cols <- scale(diabetes[, c("rw", "fpg", "glucose", "insulin", "sspg")])
@@ -143,7 +140,6 @@ kmedoids_cluster <- kmedoids_result$cluster
 hclust_cluster <- hclust_result
 hkmeans_cluster <- hkmeans_result$cluster
 mclust_cluster <- mclust_result$classification
-
 
 
 # Create a named vector for recoding
@@ -495,7 +491,7 @@ groups<-car::recode(groups,recodes="1='M';2='B'",as.factor = T)
 acc_kmediod <- mean(breast_cancer$diagnosis==groups)
 
 # Visualize the clusters (area_mean vs. smoothness_mean)
-ggplot(breast_cancer, aes(x = area_mean, y = smoothness_mean, color = groups)) +
+ggplot(breast_cancer, aes(x = texture_mean, y = radius_mean, color = groups)) +
   geom_point() +
   labs(title = "k-mediods Clustering", color = "Cluster") +
   theme_minimal()
@@ -636,6 +632,8 @@ load_source()
 # Load the data
 heart_disease_patients_tot <- read.csv("heart_disease_patients.csv")
 
+str(heart_disease_patients_tot)
+
 # Remove uninformativ non-numeric features
 heart_disease_patients <- subset(heart_disease_patients_tot, select= -c(id,sex,cp,fbs,restecg,exang,slope))
 # print(heart_disease_patients)
@@ -684,7 +682,7 @@ fviz_nbclust(x = data, FUNcluster = kmeans, method = "wss", k.max = n)
 # Determine the optimal number of clusters using the silhouette method
 fviz_nbclust(x = data, FUNcluster = kmeans, method = "silhouette", k.max = n)
 
-#------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------
 # Silhouette Scores
 
 n = 6 # max number of clusters
@@ -715,6 +713,9 @@ for( i in 1:m) {
 }
 
 ```
+Die Methode get_list_of_cluster_vectors wird verwendet, um Clusterzuweisungen für verschiedene Clustering-Methoden zu berechnen und diese in einer Liste zu speichern. Diese Liste enthält die Clusterzuweisungen für eine gegebene Anzahl von Clustern k. Der Outcome wird verwendet, um die Silhouettenwerte für verschiedene Clustering-Methoden und Clusteranzahlen zu berechnen und zu vergleichen. Dies hilft dabei, die optimale Anzahl von Clustern für die gegebenen Daten zu identifizieren.
+
+Die Ergebnisse deuten darauf hin, dass k=2 die beste Clusteranzahl zu sein scheint, da die meisten Methoden die höchsten Silhouettenwerte. Auch der WSS-Plot sowie der Silhouette-Plot lassen auf 2 als optimale Clusteranzahl schließen.
 
 Grouped Scatter/Cluster Plots for 1 to n Clusters for Each (Suitable) Clustering Method
 
@@ -790,7 +791,6 @@ create_grid_plot_vectors <- function(data, lists_of_cluster_vectors, i, n) {
   grid.arrange(grobs = plot_list, ncol = 2)
 }
 
-
 create_grid_plot_results <- function(data, lists_of_cluster_results, i, n) {
   # Depiction 2
   plot_list <- list()
@@ -810,7 +810,7 @@ create_grid_plot_results <- function(data, lists_of_cluster_results, i, n) {
 
 #--- End of Methods --#
 
-# All cluster vectors of different clustering methods have the same length independenly of k
+# All cluster vectors of different clustering methods have the same length independently of k
 m = length(lists_of_cluster_vectors[[1]])
 # Loop over k lists of cluster vectors
 # and pick the i-th cluster vector from that list
@@ -823,3 +823,36 @@ for( i in 1:(m-1)) {
 }
 
 ```
+
+```{r}
+# DBSCAN Clustering
+
+# Perform DBSCAN clustering
+dbscan_result <- dbscan(data, eps = 1, minPts = 4)
+dbscan_result$cluster
+
+# Parameteroptimierung für DBSCAN
+kNNdistplot(data, k = 5)
+abline(h = 0.5, col = "red", lty = 2)
+
+# DBSCAN Cluster Visualisierung
+fviz_cluster(dbscan_result, data = data, geom = "point", stand = FALSE, show.clust.cent = FALSE) +
+  theme_minimal() +
+  ggtitle("DBSCAN Clustering of Heart Disease Patients")
+
+# Anzahl der Cluster und Rauschpunkte
+cat("Anzahl der ermittelten cluster: ", length(unique(dbscan_result$cluster[dbscan_result$cluster > 0])), "\n")
+cat("Anzahl der als Rauschen erkannten Punkte: ", sum(dbscan_result$cluster == 0), "\n")
+
+# Clusterzuweisungen in Dataframe umwandeln
+dbscan_clusters <- data.frame(Cluster = factor(dbscan_result$cluster))
+
+# Originaldaten hinzufügen
+dbscan_clusters <- cbind(dbscan_clusters, heart_disease_patients)
+
+# Clusterzusammenfassung erstellen
+cluster_summary <- aggregate(. ~ Cluster, data = dbscan_clusters, mean)
+print(cluster_summary)
+
+```
+In diesem Abschnitt wird das DBSCAN-Clustering durchgeführt. Die Parameter wurden so gewählt, dass die Anzahl der Cluster als sinnvoll erscheinten und möglichst wenig Rauschen in den Daten erkannt wurde. Die Visualisierung zeigt, dass die Cluster mittels DBSCAN Verfahren nicht wirklich gut voneinander getrennt sind. Die Clusterzusammenfassung zeigt die Mittelwerte der Cluster für jede numerische Variable.
