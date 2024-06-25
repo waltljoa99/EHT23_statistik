@@ -286,7 +286,7 @@ diabetes_scaled <- cbind(diabetes_scaled_df, group = diabetes$group)
 ignore <- TRUE
 # Loop over the list and create a scatter plot for each set of cluster labels
 for (name in names(list_of_cluster_vectors)) {
-  if(name == "hclust") {
+  if(name == "") {
     ignore <- FALSE
   }
   plot(create_scatter_plot_with_accuracy(diabetes_scaled,
@@ -455,7 +455,7 @@ Brustkrebs ist weltweit die häufigste bösartige Erkrankung bei Frauen und eine
 # Load the data
 breast_cancer <- read.csv("breast_cancer.csv", header = TRUE, sep = ",")
 str(breast_cancer)
-summary(breast_cancer)
+#summary(breast_cancer)
 
 # check for missing values
 sum(is.na(breast_cancer))
@@ -516,7 +516,7 @@ groups <- car::recode(groups, "1='M'; 2='B'", as.factor = TRUE)
 acc_hclust <- mean(breast_cancer$diagnosis==groups)
 
 ```
-Das hierarchische Clustering hat erfolgreich zwei Hauptcluster identifiziert, die mit einer Genauigkeit von 88% den tatsächlichen Diagnosen (benign vs. malignant) entsprechen. Dies deutet darauf hin, dass durch hierarchisches Clustering eine klare Trennung der Datenpunkte möglicht ist.
+Das hierarchische Clustering hat erfolgreich zwei Hauptcluster identifiziert, die mit einer Genauigkeit von 88% den tatsächlichen Diagnosen (benign vs. malignant) entsprechen. Auch durch hierarchisches Clustering ist also eine klare Trennung der Datenpunkte möglich.
 Die Genauigkeit ist jedoch etwas niedriger als bei k-means und k-medoids.
 
 ```{r}
@@ -527,9 +527,15 @@ groups <- car::recode(groups, "1='M'; 2='B'", as.factor = TRUE)
 
 acc_mclust <- mean(breast_cancer$diagnosis==groups)
 
+# Visualize the clusters (texture_mean vs. radius_mean)
+ggplot(breast_cancer, aes(x = texture_mean, y = radius_mean, color = groups)) +
+  geom_point() +
+  labs(title = "Model-based Clustering", color = "Cluster") +
+  theme_minimal()
+
 ```
 
-Das modellbasierte Clustering hat eine Genauigkeit von 0,8910, was der Genauigkeit des k-mediod-Clustering entspricht. Dies deutet darauf hin, dass das modellbasierte Clustering in diesem Fall ähnlich effektiv ist wie k-medoids. Die Visualisierung zeigt eine klare Trennung der Cluster anhand der Merkmale `texture_mean` und `radius_mean`.
+Das modellbasierte Clustering hat eine Genauigkeit von 0,8910, was der Genauigkeit des k-mediod-Clustering entspricht. Dies bedeutet, dass das modellbasierte Clustering in diesem Fall ähnlich effektiv ist wie k-medoids. Die Visualisierung zeigt eine klare Trennung der Cluster anhand der Merkmale `texture_mean` und `radius_mean`.
 
 ```{r}
 # Perform DBSCAN clustering
@@ -540,7 +546,7 @@ groups <- car::recode(groups, "0='M'; 1='B'", as.factor = TRUE)
 
 acc_dbscan <- mean(breast_cancer$diagnosis==groups)
 
-# Berechnung der k-Nächste-Nachbarn-Distanz für k = MinPts
+# Berechnung der k-nearest Neighbour-Distanz für k = MinPts
 kNNdistplot(breast_cancer_scaled, k = 5)  # Hier setzen wir k = MinPts (Startwert)
 abline(h = 0.5, col = "red", lty = 2)
 
@@ -558,7 +564,7 @@ accuracy_df <- data.frame(method, accuracy)
 accuracy_df
 
 ```
-Die Untersuchung unterschiedlicher Clustering-Methoden auf den Brustkrebsdatensatz zeigt, dass das k-Means-Verfahren mit einer Genauigkeit von 91% am besten abschneidet. Das k-Medoids-Verfahren und das modellbasierte Clustering folgen dicht dahinter mit einer Genauigkeit von jeweils etwa 89%. Hierarchisches Clustering zeigt ebenfalls gute Ergebnisse mit einer Genauigkeit von 88%. Im Vergleich dazu zeigt DBSCAN eine deutlich geringere Genauigkeit von 64%, was darauf hinweist, dass dieses Verfahren für den gegebenen Datensatz weniger geeignet ist.
+Die Untersuchung unterschiedlicher Clustering-Methoden auf den Brustkrebsdatensatz zeigt, dass das k-Means-Verfahren mit einer Genauigkeit von 91% am besten abschneidet. Das k-Medoids-Verfahren und das modellbasierte Clustering folgen dicht dahinter mit einer Genauigkeit von jeweils etwa 89%. Hierarchisches Clustering zeigt ebenfalls gute Ergebnisse mit einer Genauigkeit von 88%. Im Vergleich dazu zeigt das dichtebasierte DBSCAN-Verfahren eine deutlich geringere Genauigkeit von 64%, was darauf hinweist, dass dieses Verfahren für den gegebenen Datensatz nicht geeignet ist.
 
 Jetzt wird überprüft, ob durch eine vorhergehende PCA eine bessere Trennung der Cluster erreicht werden kann.
 
@@ -595,7 +601,7 @@ groups.mbc_pca <- mbc_pca$classification
 groups.mbc_pca <- car::recode(groups.mbc_pca, "1='M'; 2='B'", as.factor = TRUE)
 
 # DBSCAN Clustering
-dbscan_pca <- dbscan(pca_data, eps = 5, MinPts = 50)
+dbscan_pca <- dbscan(pca_data, eps = 1, MinPts = 5)
 groups.dbscan_pca <- dbscan_pca$cluster
 groups.dbscan_pca <- car::recode(groups.dbscan_pca, "0='B'; 1='M'", as.factor = TRUE)
 
@@ -617,7 +623,7 @@ fviz_cluster(object=kmeans_pca, data=breast_cancer_scaled,ellipse.type = "norm",
 
 ```
 
-Die Auswirkung der PCA auf die Genauigkeit der Clusteranalyse zeigt große Unterschiede bei den einzelnen Methoden. Während sich die Genauigkeit des k-Means-Verfahrens nicht verbessert hat, zeigt die k-Medoids eine Verbesserung von 89.1% auf 91.38%. Die hierarchische Clusteranalyse zeigt die stärkste Verbesserung, mit einem Sprung von 88% auf 91.92%. Im Gegensatz dazu zeigt das modellbasierte Clustering eine deutliche Verschlechterung der Genauigkeit von 89.1% auf 63.62%. Offenbar ist das modellbasierte Clustering weniger gut geeignet, um die Daten in zwei Hauptcluster zu unterteilen, nachdem die Dimensionalität reduziert wurde. 
+Die Auswirkung der PCA auf die Genauigkeit der Clusteranalyse zeigt deutliche Unterschiede bei den einzelnen Methoden. Während sich die Genauigkeit des k-Means-Verfahrens nicht verbessert hat, zeigt die k-Medoids eine Verbesserung von 89.1% auf 91.38%. Die hierarchische Clusteranalyse zeigt die stärkste Verbesserung, mit einem Sprung von 88% auf 91.92%. Im Gegensatz dazu zeigt das modellbasierte Clustering eine deutliche Verschlechterung der Genauigkeit von 89.1% auf 63.62%. Offenbar ist das modellbasierte Clustering weniger gut geeignet, um die Daten in zwei Hauptcluster zu unterteilen, nachdem die Dimensionalität reduziert wurde. Das DBSCAN-Verfahren zeigt ebenfalls eine Verschlechterung der Genauigkeit von 64% auf nur 36%, wobei hier wieder nur ein Cluster und Rauschen iden 
 
 
 # 3 Clustering - Heart Disease Patients [3P]
@@ -856,3 +862,5 @@ print(cluster_summary)
 
 ```
 In diesem Abschnitt wird das DBSCAN-Clustering durchgeführt. Die Parameter wurden so gewählt, dass die Anzahl der Cluster als sinnvoll erscheinten und möglichst wenig Rauschen in den Daten erkannt wurde. Die Visualisierung zeigt, dass die Cluster mittels DBSCAN Verfahren nicht wirklich gut voneinander getrennt sind. Die Clusterzusammenfassung zeigt die Mittelwerte der Cluster für jede numerische Variable.
+
+Auch die visuelle Analyse zeigt, dass keine eindeutige Clusterstruktur erkennbar ist. Die Cluster sind nicht klar voneinander getrennt und die Clusterzusammenfassung zeigt, dass die Mittelwerte der Cluster für jede numerische Variable sehr ähnlich sind. Vielmehr scheinen die Daten eine unstrukturierte Punktwolke zu bilden. Dies könnte darauf hindeuten, dass die Daten nicht in klar abgegrenzte Cluster unterteilt werden können.
